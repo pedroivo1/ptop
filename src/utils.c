@@ -94,7 +94,7 @@ int ls_subdirs(const char *drpath, char **subfs, int size)
     return i;
 }
 
-
+// ======= CPU =======
 int p_cpuc_ids(const char *fpath, int *core_ids, int size)
 {
     FILE *fptr = fopen(fpath, "r");
