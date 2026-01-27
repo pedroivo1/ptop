@@ -27,7 +27,7 @@ int print_file(const char *fpath)
 }
 
 
-int ls_subdirs(const char *drpath, char subfs[][16], int size)
+int ls_subdirs(const char *drpath, char **subfs, int size)
 {
     struct dirent *de;
     DIR *dr = opendir(drpath);
@@ -43,10 +43,9 @@ int ls_subdirs(const char *drpath, char subfs[][16], int size)
         if (strcmp(de->d_name, ".") == 0 || strcmp(de->d_name, "..") == 0)
             continue;
 
-        if (strlen(de->d_name) < 16) { 
-            strcpy(subfs[i], de->d_name);
-            printf("%s\n", subfs[i++]);
-        }
+        subfs[i] = (char*) malloc(strlen(de->d_name) + 1);
+        strcpy(subfs[i], de->d_name);
+        printf("%s\n", subfs[i++]);
     }
     closedir(dr);
 
@@ -86,7 +85,7 @@ int parse_cpu_core_ids(const char *fpath, int *core_ids, int size)
 
 int parse_cpu_temp()
 {
-    
+    return 0;
 }
 
 

@@ -8,17 +8,20 @@
 
 #include "utils.h"
 
-void clean_file(const char *path) {
+void clean_file(const char *path)
+{
     unlink(path);
 }
 
-void clean_dir(const char *path) {
+void clean_dir(const char *path)
+{
     rmdir(path);
 }
 
 int saved_stdout, saved_stderr;
 
-void suppress_output() {
+void suppress_output()
+{
     saved_stdout = dup(STDOUT_FILENO);
     saved_stderr = dup(STDERR_FILENO);
 
@@ -30,7 +33,8 @@ void suppress_output() {
     close(dev_null);
 }
 
-void restore_output() {
+void restore_output()
+{
     dup2(saved_stdout, STDOUT_FILENO);
     dup2(saved_stderr, STDERR_FILENO);
 
@@ -38,7 +42,8 @@ void restore_output() {
     close(saved_stderr);
 }
 
-void test_print_file() {
+void test_print_file()
+{
     printf("Running test_print_file... ");
     fflush(stdout);
 
@@ -61,7 +66,8 @@ void test_print_file() {
     printf("PASSED\n");
 }
 
-void test_parse_cpu_core_ids() {
+void test_parse_cpu_core_ids()
+{
     printf("Running test_parse_cpu_core_ids... ");
     fflush(stdout); 
 
@@ -87,7 +93,8 @@ void test_parse_cpu_core_ids() {
     printf("PASSED\n");
 }
 
-void test_ls_subdirs() {
+void test_ls_subdirs()
+{
     printf("Running test_ls_subdirs... ");
     fflush(stdout);
 
@@ -95,7 +102,7 @@ void test_ls_subdirs() {
     mkdir("test_env/A", 0777);
     mkdir("test_env/B", 0777);
 
-    char result_buffer[8][16];
+    char *result_buffer[8];
     memset(result_buffer, 0, sizeof(result_buffer));
 
     suppress_output();
@@ -107,9 +114,15 @@ void test_ls_subdirs() {
     int found_A = 0;
     int found_B = 0;
 
-    for(int i = 0; i < count; i++) {
+    for(int i = 0; i < count; i++)
+    {
         if (strcmp(result_buffer[i], "A") == 0) found_A = 1;
         if (strcmp(result_buffer[i], "B") == 0) found_B = 1;
+    }
+
+    for(int i = 0; i < 8; i++)
+    {
+        free(result_buffer[i]);
     }
 
     assert(found_A == 1);
@@ -119,9 +132,11 @@ void test_ls_subdirs() {
     clean_dir("test_env/B");
     clean_dir("test_env");
     printf("PASSED\n");
+
 }
 
-int main() {
+int main()
+{
     printf("=== Starting Linux Test Suite ===\n");
     
     test_print_file();
