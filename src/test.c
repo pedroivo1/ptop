@@ -7,6 +7,7 @@
 #include <fcntl.h>
 
 #include "utils.h"
+#include "config.h"
 
 void clean_file(const char *path)
 {
@@ -16,6 +17,11 @@ void clean_file(const char *path)
 void clean_dir(const char *path)
 {
     rmdir(path);
+}
+
+void passed()
+{
+    printf("%s%sPASSED%s\n", BOLD, GREEN, RESET);
 }
 
 int saved_stdout, saved_stderr;
@@ -42,33 +48,40 @@ void restore_output()
     close(saved_stderr);
 }
 
-void test_print_file()
+void test_r_file()
 {
-    printf("Running test_print_file... ");
+    printf("test_r_file\t\t");
     fflush(stdout);
 
-    const char *fname = "test_print.txt";
+    const char *fname = "test_read.txt";
+    const char *expected_content = "Hello World\n";
     
     FILE *f = fopen(fname, "w");
     if (!f) { perror("Test Setup Failed"); return; }
-    fprintf(f, "Hello World\n");
+    fprintf(f, "%s", expected_content);
     fclose(f);
 
+    // Test Success
+    char *content = r_file(fname);
+    assert(content != NULL);
+    assert(strcmp(content, expected_content) == 0);
+    free(content);
+
+    // Test Failure (Suppress stderr error message)
     suppress_output();
-    int res_success = print_file(fname);
-    int res_fail = print_file("ghost_file.txt");
+    char *ghost = r_file("ghost_file.txt");
     restore_output();
 
-    assert(res_success == 0);
-    assert(res_fail != 0);
+    assert(ghost == NULL);
 
     clean_file(fname);
-    printf("PASSED\n");
+    passed();
+
 }
 
-void test_parse_cpu_core_ids()
+void test_p_cpuc_ids()
 {
-    printf("Running test_parse_cpu_core_ids... ");
+    printf("test_p_cpuc_ids\t\t");
     fflush(stdout); 
 
     const char *fname = "test_cpuinfo.txt";
@@ -82,7 +95,7 @@ void test_parse_cpu_core_ids()
     fprintf(f, "processor\t: 5\nmodel name\t: Test CPU\n\n");
     fclose(f);
 
-    parse_cpu_core_ids(fname, cores, 10);
+    p_cpuc_ids(fname, cores, 10);
 
     assert(cores[0] == 0);
     assert(cores[1] == 1);
@@ -90,12 +103,12 @@ void test_parse_cpu_core_ids()
     assert(cores[3] == -1);
 
     clean_file(fname);
-    printf("PASSED\n");
+    passed();
 }
 
 void test_ls_subdirs()
 {
-    printf("Running test_ls_subdirs... ");
+    printf("test_ls_subdirs\t\t");
     fflush(stdout);
 
     mkdir("test_env", 0777);
@@ -131,18 +144,38 @@ void test_ls_subdirs()
     clean_dir("test_env/A");
     clean_dir("test_env/B");
     clean_dir("test_env");
-    printf("PASSED\n");
+    passed();
+}
 
+void test_count_subdirs()
+{
+    printf("test_count_subdirs\t");
+    fflush(stdout);
+
+    mkdir("test_count", 0777);
+    mkdir("test_count/X", 0777);
+    mkdir("test_count/Y", 0777);
+    mkdir("test_count/Z", 0777);
+
+    int count = count_subdirs("test_count");
+    assert(count == 3);
+
+    clean_dir("test_count/X");
+    clean_dir("test_count/Y");
+    clean_dir("test_count/Z");
+    clean_dir("test_count");
+    passed();
 }
 
 int main()
 {
     printf("=== Starting Linux Test Suite ===\n");
     
-    test_print_file();
-    test_parse_cpu_core_ids();
+    test_r_file();
+    test_p_cpuc_ids();
     test_ls_subdirs();
+    test_count_subdirs();
 
-    printf("=== All Tests Passed ===\n");
+    printf("%s%s=== All Tests Passed ===%s\n\n", BOLD, GREEN, RESET);
     return 0;
 }

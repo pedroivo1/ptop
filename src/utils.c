@@ -3,28 +3,48 @@
 #include <stdlib.h>
 #include <dirent.h>
 #include "utils.h"
-
-#define MAX_LINE_LENGTH 256
-#define MAX_CORES 32
+#include "config.h"
 
 
-int print_file(const char *fpath)
+char *r_file(const char *fpath)
 {
     FILE *fptr = fopen(fpath, "r");
     if (fptr == NULL)
     {
         fprintf(stderr, "Error: Could not open file \"%s\"\n", fpath);
-        return 1;
+        return NULL;
     }
 
+    char *text = malloc(sizeof(char));
+    if (!text)
+    {
+        fclose(fptr);
+        return NULL;
+    }
+    text[0] = '\0';
+
+    int text_len = 0;
     char buff[MAX_LINE_LENGTH];
     while(fgets(buff, sizeof(buff), fptr))
     {
-        printf("%s", buff);
+        int chunk_len = strlen(buff);
+        char *temp = (char*) realloc(text, text_len + chunk_len + 1);
+        if(temp == NULL)
+        {
+            free(text);
+            fclose(fptr);
+            return NULL;
+        }
+        text = temp;
+
+        strcpy(text + text_len, buff);
+        text_len += chunk_len;
     }
     fclose(fptr);
-    return 0;
+
+    return text;
 }
+
 
 int count_subdirs(const char *drpath)
 {
@@ -47,6 +67,7 @@ int count_subdirs(const char *drpath)
 
     return i;
 }
+
 
 int ls_subdirs(const char *drpath, char **subfs, int size)
 {
@@ -74,7 +95,7 @@ int ls_subdirs(const char *drpath, char **subfs, int size)
 }
 
 
-int parse_cpu_core_ids(const char *fpath, int *core_ids, int size)
+int p_cpuc_ids(const char *fpath, int *core_ids, int size)
 {
     FILE *fptr = fopen(fpath, "r");
     if (fptr == NULL)
@@ -111,7 +132,7 @@ int get_hardwares(char **hw_paths)
 }
 
 
-int parse_cpu_temp()
+int p_cpuc_temp()
 {
     return 0;
 }
@@ -120,7 +141,7 @@ int parse_cpu_temp()
 void cpu_monitor()
 {
     int cores[MAX_CORES];
-    parse_cpu_core_ids("/proc/cpuinfo", cores, MAX_CORES);
+    p_cpuc_ids("/proc/cpuinfo", cores, MAX_CORES);
 
     int i = 0;
     while(cores[i] != -1)

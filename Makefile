@@ -1,20 +1,21 @@
 CC = gcc
 CFLAGS = -Wall -I.
+HEADERS = src/utils.h src/config.h
 
 .PHONY: all run test clean
 
 # Compilation
-all:
+all: src/main.c src/utils.c $(HEADERS)
 	$(CC) $(CFLAGS) src/main.c src/utils.c -o ptop
 
 # Tests
-t:
+t: src/test.c src/utils.c $(HEADERS)
 	$(CC) $(CFLAGS) -g src/test.c src/utils.c -o test
 
-vtest:
+vtest: t
 	valgrind --leak-check=full --track-origins=yes -s ./test > /dev/null
 
-test:
+test: t
 	./test
 
 # Clean
