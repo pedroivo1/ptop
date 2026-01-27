@@ -26,6 +26,27 @@ int print_file(const char *fpath)
     return 0;
 }
 
+int count_subdirs(const char *drpath)
+{
+    struct dirent *de;
+    DIR *dr = opendir(drpath);
+    if (dr == NULL)
+    {
+        fprintf(stderr, "Error: Could not open directory \"%s\"\n", drpath);
+        return 0;
+    }
+
+    int i = 0;
+    while((de = readdir(dr)))
+    {
+        if (strcmp(de->d_name, ".") == 0 || strcmp(de->d_name, "..") == 0)
+            continue;
+        i++;
+    }
+    closedir(dr);
+
+    return i;
+}
 
 int ls_subdirs(const char *drpath, char **subfs, int size)
 {
@@ -45,7 +66,7 @@ int ls_subdirs(const char *drpath, char **subfs, int size)
 
         subfs[i] = (char*) malloc(strlen(de->d_name) + 1);
         strcpy(subfs[i], de->d_name);
-        printf("%s\n", subfs[i++]);
+        i++;
     }
     closedir(dr);
 
@@ -82,6 +103,13 @@ int parse_cpu_core_ids(const char *fpath, int *core_ids, int size)
     fclose(fptr);
     return 0;
 }
+
+
+int get_hardwares(char **hw_paths)
+{
+    return 0;
+}
+
 
 int parse_cpu_temp()
 {

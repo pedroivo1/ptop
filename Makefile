@@ -5,15 +5,16 @@ CFLAGS = -Wall -I.
 
 # Compilation
 all:
-	$(CC) $(CFLAGS) main.c utils.c -o ptop
+	$(CC) $(CFLAGS) src/main.c src/utils.c -o ptop
 
 # Tests
+t:
+	$(CC) $(CFLAGS) -g src/test.c src/utils.c -o test
+
 vtest:
-	$(CC) $(CFLAGS) -g test.c utils.c -o test
 	valgrind --leak-check=full --track-origins=yes -s ./test > /dev/null
 
 test:
-	$(CC) $(CFLAGS) -g test.c utils.c -o test
 	./test
 
 # Clean
