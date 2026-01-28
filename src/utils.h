@@ -2,6 +2,7 @@
 #define UTILS_H
 
 char *r_file(const char *fpath);
+long read_int_from_file(const char* path);
 int count_subdirs(const char *drpath);
 int ls_subdirs(const char *drpath, char **subfs, int size);
 

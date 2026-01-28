@@ -9,18 +9,7 @@
 char *r_file(const char *fpath)
 {
     FILE *fptr = fopen(fpath, "r");
-    if (fptr == NULL)
-    {
-        fprintf(stderr, "Error: Could not open file \"%s\"\n", fpath);
-        return NULL;
-    }
-
     char *text = malloc(sizeof(char));
-    if (text == NULL)
-    {
-        fclose(fptr);
-        return NULL;
-    }
     text[0] = '\0';
 
     int text_len = 0;
@@ -49,10 +38,9 @@ char *r_file(const char *fpath)
 long read_int_from_file(const char* path)
 {
     FILE* fptr = fopen(path, "r");
-    if(!fptr) return -1;
 
     long value;
-    if (fscanf(fptr, "%ld", &value) != 1) value = -1;
+    fscanf(fptr, "%ld", &value);
 
     fclose(fptr);
     return value;
@@ -63,11 +51,6 @@ int count_subdirs(const char *drpath)
 {
     struct dirent *de;
     DIR *dr = opendir(drpath);
-    if (dr == NULL)
-    {
-        fprintf(stderr, "Error: Could not open directory \"%s\"\n", drpath);
-        return 0;
-    }
 
     int i = 0;
     while((de = readdir(dr)))
@@ -86,11 +69,6 @@ int ls_subdirs(const char *drpath, char **subfs, int size)
 {
     struct dirent *de;
     DIR *dr = opendir(drpath);
-    if (dr == NULL)
-    {
-        fprintf(stderr, "Error: Could not open directory \"%s\"\n", drpath);
-        return 0;
-    }
 
     int i = 0;
     while((de = readdir(dr)) != NULL && i < size)
@@ -107,15 +85,22 @@ int ls_subdirs(const char *drpath, char **subfs, int size)
     return i;
 }
 
+
+void handle_exit(int sig)
+{
+    printf("\033[?1049l");
+    printf("\033[?25h");
+    exit(0);
+}
+
+
+
+// ===================
 // ======= CPU =======
+// ===================
 int p_cpuc_ids(const char *fpath, int *core_ids, int size)
 {
     FILE *fptr = fopen(fpath, "r");
-    if (fptr == NULL)
-    {
-        fprintf(stderr, "Error: Could not open file \"%s\"\n", fpath);
-        return 1;
-    }
 
     char buff[MAX_LINE_LENGTH];
     int i = 0;
@@ -161,12 +146,4 @@ void cpu_monitor()
     {
         printf("%d\n", cores[i++]);
     }
-}
-
-
-void handle_exit(int sig)
-{
-    printf("\033[?1049l");
-    printf("\033[?25h");
-    exit(0);
 }
