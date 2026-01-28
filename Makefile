@@ -2,11 +2,14 @@ CC = gcc
 CFLAGS = -Wall -I.
 HEADERS = src/utils.h src/config.h
 
-.PHONY: all run test clean
+.PHONY: all run test clean cpumon
 
 # Compilation
 all: src/main.c src/utils.c $(HEADERS)
 	$(CC) $(CFLAGS) src/main.c src/utils.c -o ptop
+
+cpumon:
+	$(CC) $(CFLAGS) src/cpumon.c src/utils.c -o cpumon
 
 # Tests
 t: src/test.c src/utils.c $(HEADERS)
@@ -20,4 +23,4 @@ test: t
 
 # Clean
 clean:
-	rm -f ptop test
+	rm -f ptop test cpumon

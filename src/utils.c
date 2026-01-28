@@ -16,7 +16,7 @@ char *r_file(const char *fpath)
     }
 
     char *text = malloc(sizeof(char));
-    if (!text)
+    if (text == NULL)
     {
         fclose(fptr);
         return NULL;
@@ -43,6 +43,19 @@ char *r_file(const char *fpath)
     fclose(fptr);
 
     return text;
+}
+
+
+long read_int_from_file(const char* path)
+{
+    FILE* fptr = fopen(path, "r");
+    if(!fptr) return -1;
+
+    long value;
+    if (fscanf(fptr, "%ld", &value) != 1) value = -1;
+
+    fclose(fptr);
+    return value;
 }
 
 
