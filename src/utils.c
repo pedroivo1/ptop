@@ -35,6 +35,37 @@ char *r_file(const char *fpath)
 }
 
 
+char *r_first_n_rows(const char *fpath, const int frow)
+{
+    FILE *fptr = fopen(fpath, "r");
+    char *text = malloc(sizeof(char));
+    text[0] = '\0';
+
+    int text_len = 0;
+    char buff[MAX_LINE_LENGTH];
+    int i = 0;
+    while(fgets(buff, sizeof(buff), fptr) && i < frow)
+    {
+        int chunk_len = strlen(buff);
+        char *temp = (char*) realloc(text, text_len + chunk_len + 1);
+        if(temp == NULL)
+        {
+            free(text);
+            fclose(fptr);
+            return NULL;
+        }
+        text = temp;
+
+        strcpy(text + text_len, buff);
+        text_len += chunk_len;
+        i++;
+    }
+    fclose(fptr);
+
+    return text;
+}
+
+
 long read_int_from_file(const char* path)
 {
     FILE* fptr = fopen(path, "r");
