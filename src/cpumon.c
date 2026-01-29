@@ -6,7 +6,6 @@
 #include <signal.h>
 #include <fcntl.h>
 #include <termios.h>
-#include "utils.h"
 
 #define CORES_N 12
 #define PHY_CORES_N 6
@@ -15,7 +14,7 @@
 #define HWMON_N 9
 #define STAT_BUFF_LEN 1664
 #define STAT_PATH "/proc/stat"
-#define DELAY_US 500000
+#define DELAY_mS 400
 
 volatile sig_atomic_t run = 1;
 
@@ -143,23 +142,44 @@ void parse_cpu_stats(CPU_mon* cpumon)
 
 int get_coretemp_id()
 {
-    char* text;
-    char path[256];
+    char path[32];
+    char buffer[32];
 
     for(int i = 0; i < HWMON_N; i++)
     {
         snprintf(path, sizeof(path), "/sys/class/hwmon/hwmon%d/name", i);
-        text = r_file(path);
-        if(text != NULL && strstr(text, "coretemp") != NULL)
+        int fd = open(path, O_RDONLY);
+        ssize_t bytes_read = read(fd, buffer, sizeof(buffer) - 1);
+        close(fd);
+        if (bytes_read > 0) buffer[bytes_read] = '\0';
+        if(strstr(buffer, "coretemp") != NULL)
         {
-            free(text);
             return i;
         }
-
-        if(text != NULL) free(text);
     }
 
     return -1;
+}
+
+
+long read_sysfs_int(const char* path)
+{
+    char buffer[16];
+    int val = 0;
+    int fd = open(path, O_RDONLY);
+    ssize_t bytes_read = read(fd, buffer, sizeof(buffer) - 1);
+    close(fd);
+
+    if (bytes_read > 0)
+    {
+        buffer[bytes_read] = '\0';
+        char *p = buffer;
+        while (*p >= '0' && *p <= '9')
+        {
+            val = (val * 10) + (*p++ - '0');
+        }
+    }
+    return val;
 }
 
 long get_core_temp_c(int core_i, int hwmon_cpu_id)
@@ -167,7 +187,7 @@ long get_core_temp_c(int core_i, int hwmon_cpu_id)
     char path[256];
     snprintf(path, sizeof(path), "/sys/class/hwmon/hwmon%d/temp%d_input", hwmon_cpu_id, core_i);
 
-    long temp_mc = read_int_from_file(path);
+    long temp_mc = read_sysfs_int(path);
     return temp_mc/1000;
 }
 
@@ -176,7 +196,7 @@ long get_core_freq_mhz(int core_i)
     char path[256];
     snprintf(path, sizeof(path), "/sys/devices/system/cpu/cpu%d/cpufreq/scaling_cur_freq", core_i);
 
-    long freq_khz = read_int_from_file(path);
+    long freq_khz = read_sysfs_int(path);
     return freq_khz / 1000;
 }
 
@@ -200,13 +220,12 @@ void cpu_update(CPU_mon* cpumon, int hwmon_cpu_id)
 
 void cpu_show(CPU_mon* cpumon)
 {
-    printf("%s\n", MODEL);
     for(int i = 0; i < CORES_N; i++)
     {
-        printf("C%d\t", i);
-        printf("%.1f GHz    ", cpumon->freq[i] / 1000.0);
-        printf("%d °C    ", cpumon->temp[i]);
-        printf("%d%%\n", cpumon->usage[i]);
+        printf("C%d", i);
+        printf("\033[7G%.1f GHz", cpumon->freq[i] / 1000.0);
+        printf("\033[18G%d°C", cpumon->temp[i]);
+        printf("\033[25G%3d%%\n", cpumon->usage[i]);
     }
 }
 
@@ -240,15 +259,18 @@ int main()
 
     CPU_mon cpumon;
     init_cpumon(&cpumon);
+    int delay = DELAY_mS*1000;
 
     int hwmon_cpu_id = get_coretemp_id();
     setup_terminal();
+    printf("\033[H");
+    printf("%s\t%dms\n", MODEL, DELAY_mS);
     while(run)
     {
-        printf("\033[H");
+        printf("\033[3;1H");
         cpu_update(&cpumon, hwmon_cpu_id);
         cpu_show(&cpumon);
-        usleep(500000);
+        usleep(delay);
     }
 
     close(cpumon.fd_stat);
