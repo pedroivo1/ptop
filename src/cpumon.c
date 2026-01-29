@@ -4,6 +4,7 @@
 #include <unistd.h>
 #include <stdint.h>
 #include <signal.h>
+#include <fcntl.h>
 #include "utils.h"
 
 #define CORES_N 12
@@ -38,56 +39,70 @@ CPU_mon* new_cpumon()
 }
 
 
-void parse_cpu_stats(char* raw_text, CPU_mon* cpumon)
+void parse_cpu_stats(CPU_mon* cpumon)
 {
-    // A. "Fatiar" a primeira linha
-    // O strtok usa o próprio raw_text. Ele não cria cópia.
-    char* line = strtok(raw_text, "\n");
+    char buffer[STAT_BUFF_LEN];
 
-    while (line != NULL)
+    int fd = open("/proc/stat", O_RDONLY);
+    ssize_t bytes_read = read(fd, buffer, STAT_BUFF_LEN - 1);
+    close(fd);
+
+    buffer[bytes_read] = '\0';
+
+    char *p = buffer;
+    while (*p)
     {
-        // B. Analisar a linha
-        // Precisamos verificar se a linha começa com "cpu"
-        // E pular a primeira linha que é o total (tem um espaço depois de cpu)
-        if (strncmp(line, "cpu", 3) == 0 && line[3] != ' ')
+        if (p[0] == 'c' && p[1] ==  'p' && p[2] == 'u')
         {
-            int cpu_id;
-            unsigned long long user, nice, system, idle, iowait, irq, softirq, steal;
-
-            // C. Extrair os números das colunas
-            // cpu%d -> Lê o ID (0, 1, 2...)
-            // %llu -> Lê "Long Long Unsigned" (números gigantes)
-            int ret = sscanf(line, "cpu%d %llu %llu %llu %llu %llu %llu %llu %llu",
-                             &cpu_id, 
-                             &user, &nice, &system, &idle, 
-                             &iowait, &irq, &softirq, &steal);
-
-            if (ret >= 9 && cpu_id < CORES_N) // Leu tudo certo?
+            if (p[3] >= '0' && p[3] <= '9')
             {
-                // D. Matemática do Linux (Jiffies)
-                unsigned long long active = user + nice + system + irq + softirq + steal;
-                unsigned long long total_idle = idle + iowait;
-                unsigned long long total = active + total_idle;
+                p += 3;
 
-                // E. Calcular o Delta (Diferença entre Agora e Antes)
-                unsigned long long diff_total = total - cpumon->prev_total[cpu_id];
-                unsigned long long diff_idle  = total_idle - cpumon->prev_idle[cpu_id];
-
-                // F. Calcular Porcentagem
-                if (diff_total > 0) {
-                    // (Total - Idle) = Tempo trabalhado
-                    unsigned long long usage = (diff_total - diff_idle) * 100 / diff_total;
-                    cpumon->usage[cpu_id] = (int8_t)usage;
+                int cpu_id = 0;
+                while (*p >= '0' && *p <= '9')
+                {
+                    cpu_id = (cpu_id * 10) + (*p - '0');
+                    p++;
                 }
 
-                // G. Salvar estado para a próxima volta
-                cpumon->prev_total[cpu_id] = total;
-                cpumon->prev_idle[cpu_id] = total_idle;
+                if (cpu_id < CORES_N)
+                {
+                    uint64_t fields[8];
+
+                    for (int i = 0; i < 8; i++)
+                    {
+                        while (*p == ' ') p++;
+
+                        uint64_t val = 0;
+                        while (*p >= '0' && *p <= '9')
+                        {
+                            val = (val * 10) + (*p - '0');
+                            p++;
+                        }
+                        fields[i] = val;
+                    }
+
+                    // Matemática do uso (User + Nice + System + Irq + SoftIrq + Steal)
+                    uint64_t active = fields[0] + fields[1] + fields[2] + fields[5] + fields[6] + fields[7];
+                    uint64_t total_idle = fields[3] + fields[4]; // Idle + IOwait
+                    uint64_t total = active + total_idle;
+
+                    uint64_t diff_total = total - cpumon->prev_total[cpu_id];
+                    uint64_t diff_idle  = total_idle - cpumon->prev_idle[cpu_id];
+
+                    if (diff_total > 0) {
+                        // Calcula % e guarda no int8_t
+                        cpumon->usage[cpu_id] = (int8_t)((diff_total - diff_idle) * 100 / diff_total);
+                    }
+
+                    // Atualiza estado anterior
+                    cpumon->prev_total[cpu_id] = total;
+                    cpumon->prev_idle[cpu_id] = total_idle;
+                }
             }
         }
-
-        // H. Pega a próxima "fatia" (próxima linha)
-        line = strtok(NULL, "\n");
+        while (*p && *p != '\n') p++;
+        if (*p == '\n') p++;
     }
 }
 
@@ -145,13 +160,9 @@ void cpu_update(CPU_mon* cpumon, int hwmon_cpu_id)
         cpumon->temp[i+PHY_CORES_N] = cpumon->temp[i];
     }
 
-    char* text = r_first_n_rows("/proc/stat", 13);
-    if (text != NULL)
-    {
-        parse_cpu_stats(text, cpumon);
+    // %
+    parse_cpu_stats(cpumon);
         
-        free(text);
-    }
 }
 
 void cpu_show(CPU_mon* cpumon)
