@@ -15,6 +15,7 @@
 #define STAT_BUFF_LEN 1664
 #define STAT_PATH "/proc/stat"
 #define DELAY_mS 400
+#define OUT_BUFF_LEN 512
 
 volatile sig_atomic_t run = 1;
 
@@ -26,6 +27,8 @@ typedef struct
     uint64_t prev_idle[CORES_N];
 
     int fd_stat;
+    int fd_temp[PHY_CORES_N];
+    int fd_freq[CORES_N];
 
     int16_t freq[CORES_N];
     int8_t temp[CORES_N];
@@ -33,10 +36,22 @@ typedef struct
 
 } CPU_mon;
 
-CPU_mon* init_cpumon(CPU_mon* cpumon)
+CPU_mon* init_cpumon(CPU_mon* cpumon, int hwmon_cpu_id)
 {
     memset(cpumon, 0, sizeof(CPU_mon));
     cpumon->fd_stat = open(STAT_PATH, O_RDONLY);
+
+    char path[64];
+    for(int i = 0; i < PHY_CORES_N; i++)
+    {
+        snprintf(path, sizeof(path), "/sys/class/hwmon/hwmon%d/temp%d_input", hwmon_cpu_id, i+2);
+        cpumon->fd_temp[i] = open(path, O_RDONLY);
+    }
+    for(int i = 0; i < CORES_N; i++)
+    {
+        snprintf(path, sizeof(path), "/sys/devices/system/cpu/cpu%d/cpufreq/scaling_cur_freq", i);
+        cpumon->fd_freq[i] = open(path, O_RDONLY);
+    }
 
     return cpumon;
 }
@@ -133,6 +148,7 @@ void parse_cpu_stats(CPU_mon* cpumon)
                     cpumon->prev_total[cpu_id] = total;
                     cpumon->prev_idle[cpu_id] = total_idle;
                 }
+                if (cpu_id >= CORES_N) break;
             }
         }
         while (*p && *p != '\n') p++;
@@ -162,13 +178,12 @@ int get_coretemp_id()
 }
 
 
-long read_sysfs_int(const char* path)
+int read_sysfs_int(int fd)
 {
     char buffer[16];
     int val = 0;
-    int fd = open(path, O_RDONLY);
     ssize_t bytes_read = read(fd, buffer, sizeof(buffer) - 1);
-    close(fd);
+    lseek(fd, 0, SEEK_SET);
 
     if (bytes_read > 0)
     {
@@ -182,51 +197,43 @@ long read_sysfs_int(const char* path)
     return val;
 }
 
-long get_core_temp_c(int core_i, int hwmon_cpu_id)
+void get_core_temp_c(CPU_mon* cpumon)
 {
-    char path[256];
-    snprintf(path, sizeof(path), "/sys/class/hwmon/hwmon%d/temp%d_input", hwmon_cpu_id, core_i);
-
-    long temp_mc = read_sysfs_int(path);
-    return temp_mc/1000;
+    for(int i = 0; i < PHY_CORES_N; i++)
+    {
+        cpumon->temp[i] = read_sysfs_int(cpumon->fd_temp[i]) / 1000;
+        cpumon->temp[i+PHY_CORES_N] = cpumon->temp[i];
+    }
 }
 
-long get_core_freq_mhz(int core_i)
+void get_core_freq_mhz(CPU_mon* cpumon)
 {
-    char path[256];
-    snprintf(path, sizeof(path), "/sys/devices/system/cpu/cpu%d/cpufreq/scaling_cur_freq", core_i);
-
-    long freq_khz = read_sysfs_int(path);
-    return freq_khz / 1000;
+    for(int i = 0; i < CORES_N; i++)
+        cpumon->freq[i] = read_sysfs_int(cpumon->fd_freq[i]) / 1000;
 }
 
 void cpu_update(CPU_mon* cpumon, int hwmon_cpu_id)
 {
-    // MHz
-    for(int i = 0; i < CORES_N; i++)
-        cpumon->freq[i] = get_core_freq_mhz(i);
-
-    // °C
-    for(int i = 0; i < PHY_CORES_N; i++)
-    {
-        cpumon->temp[i] = get_core_temp_c(i+2, hwmon_cpu_id);
-        cpumon->temp[i+PHY_CORES_N] = cpumon->temp[i];
-    }
-
-    // %
+    get_core_freq_mhz(cpumon);
+    get_core_temp_c(cpumon);
     parse_cpu_stats(cpumon);
-        
 }
 
 void cpu_show(CPU_mon* cpumon)
 {
+    int offset = 0;
+    char buffer[OUT_BUFF_LEN];
+
+    offset += sprintf(buffer + offset, "\033[3;1H");
     for(int i = 0; i < CORES_N; i++)
     {
-        printf("C%d", i);
-        printf("\033[7G%.1f GHz", cpumon->freq[i] / 1000.0);
-        printf("\033[18G%d°C", cpumon->temp[i]);
-        printf("\033[25G%3d%%\n", cpumon->usage[i]);
+        offset += sprintf(buffer + offset, "C%d", i);
+        offset += sprintf(buffer + offset, "\033[7G%.1f GHz", cpumon->freq[i] / 1000.0);
+        offset += sprintf(buffer + offset, "\033[18G%d°C", cpumon->temp[i]);
+        offset += sprintf(buffer + offset, "\033[25G%3d%%\n", cpumon->usage[i]);
     }
+
+    write(STDOUT_FILENO, buffer, offset);
 }
 
 
@@ -241,15 +248,13 @@ void setup_terminal() {
     tcgetattr(STDIN_FILENO, &original_term);
     new_term = original_term;
     new_term.c_lflag &= ~(ECHO | ICANON); 
-    printf("\033[?25l");
-    printf("\033[?1049h");
+    printf("\033[?25l\033[?1049h");
     tcsetattr(STDIN_FILENO, TCSANOW, &new_term);
 }
 
 void restore_terminal() {
     tcsetattr(STDIN_FILENO, TCSANOW, &original_term);
-    printf("\033[?25h");
-    printf("\033[?1049l");
+    printf("\033[?25h\033[?1049l");
 }
 
 
@@ -257,17 +262,16 @@ int main()
 {
     signal(SIGINT, cpumon_exit);
 
+    int hwmon_cpu_id = get_coretemp_id();
+
     CPU_mon cpumon;
-    init_cpumon(&cpumon);
+    init_cpumon(&cpumon, hwmon_cpu_id);
     int delay = DELAY_mS*1000;
 
-    int hwmon_cpu_id = get_coretemp_id();
     setup_terminal();
-    printf("\033[H");
-    printf("%s\t%dms\n", MODEL, DELAY_mS);
+    printf("\033[H%s\t%dms\n", MODEL, DELAY_mS);
     while(run)
     {
-        printf("\033[3;1H");
         cpu_update(&cpumon, hwmon_cpu_id);
         cpu_show(&cpumon);
         usleep(delay);
