@@ -11,16 +11,18 @@
 #define MODEL_LEN 9
 #define MODEL "i7-10750H"
 #define HWMON_N 9
+#define STAT_BUFF_LEN 1664
 
 typedef struct
 {
+    unsigned long long prev_total[CORES_N];
+    unsigned long long prev_idle[CORES_N];
+
     int16_t freq[CORES_N];
     int8_t temp[CORES_N];
     int8_t usage[CORES_N];
     char model[MODEL_LEN + 1];
 
-    unsigned long long prev_total[CORES_N];
-    unsigned long long prev_idle[CORES_N];
 } CPU_mon;
 
 CPU_mon* new_cpumon()
@@ -29,12 +31,8 @@ CPU_mon* new_cpumon()
 
     if (cpumon != NULL)
     {
-        for (int i = 0; i < CORES_N; i++)
-        {
-            cpumon->freq[i] = 0;
-            cpumon->temp[i] = 0;
-        }
-        strcpy(cpumon->model, MODEL);
+        memset(cpumon, 0, sizeof(CPU_mon));
+        memcpy(cpumon->model, MODEL, MODEL_LEN);
     }
     return cpumon;
 }
