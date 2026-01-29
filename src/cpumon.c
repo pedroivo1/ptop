@@ -5,6 +5,7 @@
 #include <stdint.h>
 #include <signal.h>
 #include <fcntl.h>
+#include <termios.h>
 #include "utils.h"
 
 #define CORES_N 12
@@ -13,28 +14,31 @@
 #define MODEL "i7-10750H"
 #define HWMON_N 9
 #define STAT_BUFF_LEN 1664
+#define STAT_PATH "/proc/stat"
+#define DELAY_US 500000
+
+volatile sig_atomic_t run = 1;
+
+struct termios original_term;
 
 typedef struct
 {
-    unsigned long long prev_total[CORES_N];
-    unsigned long long prev_idle[CORES_N];
+    uint64_t prev_total[CORES_N];
+    uint64_t prev_idle[CORES_N];
+
+    int fd_stat;
 
     int16_t freq[CORES_N];
     int8_t temp[CORES_N];
     int8_t usage[CORES_N];
-    char model[MODEL_LEN + 1];
 
 } CPU_mon;
 
-CPU_mon* new_cpumon()
+CPU_mon* init_cpumon(CPU_mon* cpumon)
 {
-    CPU_mon* cpumon = (CPU_mon*) malloc(sizeof(CPU_mon));
+    memset(cpumon, 0, sizeof(CPU_mon));
+    cpumon->fd_stat = open(STAT_PATH, O_RDONLY);
 
-    if (cpumon != NULL)
-    {
-        memset(cpumon, 0, sizeof(CPU_mon));
-        memcpy(cpumon->model, MODEL, MODEL_LEN);
-    }
     return cpumon;
 }
 
@@ -43,9 +47,8 @@ void parse_cpu_stats(CPU_mon* cpumon)
 {
     char buffer[STAT_BUFF_LEN];
 
-    int fd = open("/proc/stat", O_RDONLY);
-    ssize_t bytes_read = read(fd, buffer, STAT_BUFF_LEN - 1);
-    close(fd);
+    ssize_t bytes_read = read(cpumon->fd_stat, buffer, STAT_BUFF_LEN - 1);
+    lseek(cpumon->fd_stat, 0, SEEK_SET);
 
     buffer[bytes_read] = '\0';
 
@@ -67,35 +70,67 @@ void parse_cpu_stats(CPU_mon* cpumon)
 
                 if (cpu_id < CORES_N)
                 {
-                    uint64_t fields[8];
+                    
+                    uint64_t active = 0;
+                    uint64_t total_idle = 0;
+                    uint64_t val;
 
-                    for (int i = 0; i < 8; i++)
-                    {
-                        while (*p == ' ') p++;
+                    // /proc/stat: user, nice, system, idle, iowait, irq, softirq, steal
+                    // Column 0: User (Active)
+                    while (*p == ' ') p++;
+                    val = 0;
+                    while (*p >= '0' && *p <= '9') val = (val * 10) + (*p++ - '0');
+                    active += val;
 
-                        uint64_t val = 0;
-                        while (*p >= '0' && *p <= '9')
-                        {
-                            val = (val * 10) + (*p - '0');
-                            p++;
-                        }
-                        fields[i] = val;
-                    }
+                    // Column 1: Nice (Active)
+                    while (*p == ' ') p++;
+                    val = 0;
+                    while (*p >= '0' && *p <= '9') val = (val * 10) + (*p++ - '0');
+                    active += val;
 
-                    // Matemática do uso (User + Nice + System + Irq + SoftIrq + Steal)
-                    uint64_t active = fields[0] + fields[1] + fields[2] + fields[5] + fields[6] + fields[7];
-                    uint64_t total_idle = fields[3] + fields[4]; // Idle + IOwait
+                    // Column 2: System (Active)
+                    while (*p == ' ') p++;
+                    val = 0;
+                    while (*p >= '0' && *p <= '9') val = (val * 10) + (*p++ - '0');
+                    active += val;
+
+                    // Column 3: Idle (Idle)
+                    while (*p == ' ') p++;
+                    val = 0;
+                    while (*p >= '0' && *p <= '9') val = (val * 10) + (*p++ - '0');
+                    total_idle += val;
+
+                    // Column 4: IOwait (Idle)
+                    while (*p == ' ') p++;
+                    val = 0;
+                    while (*p >= '0' && *p <= '9') val = (val * 10) + (*p++ - '0');
+                    total_idle += val;
+
+                    // Column 5: Irq (Active)
+                    while (*p == ' ') p++;
+                    val = 0;
+                    while (*p >= '0' && *p <= '9') val = (val * 10) + (*p++ - '0');
+                    active += val;
+
+                    // Column 6: SoftIrq (Active)
+                    while (*p == ' ') p++;
+                    val = 0;
+                    while (*p >= '0' && *p <= '9') val = (val * 10) + (*p++ - '0');
+                    active += val;
+
+                    // Column 7: Steal (Active)
+                    while (*p == ' ') p++;
+                    val = 0;
+                    while (*p >= '0' && *p <= '9') val = (val * 10) + (*p++ - '0');
+                    active += val;
+
                     uint64_t total = active + total_idle;
-
                     uint64_t diff_total = total - cpumon->prev_total[cpu_id];
                     uint64_t diff_idle  = total_idle - cpumon->prev_idle[cpu_id];
 
-                    if (diff_total > 0) {
-                        // Calcula % e guarda no int8_t
+                    if (diff_total > 0)
                         cpumon->usage[cpu_id] = (int8_t)((diff_total - diff_idle) * 100 / diff_total);
-                    }
 
-                    // Atualiza estado anterior
                     cpumon->prev_total[cpu_id] = total;
                     cpumon->prev_idle[cpu_id] = total_idle;
                 }
@@ -149,9 +184,7 @@ void cpu_update(CPU_mon* cpumon, int hwmon_cpu_id)
 {
     // MHz
     for(int i = 0; i < CORES_N; i++)
-    {
         cpumon->freq[i] = get_core_freq_mhz(i);
-    }
 
     // °C
     for(int i = 0; i < PHY_CORES_N; i++)
@@ -167,6 +200,7 @@ void cpu_update(CPU_mon* cpumon, int hwmon_cpu_id)
 
 void cpu_show(CPU_mon* cpumon)
 {
+    printf("%s\n", MODEL);
     for(int i = 0; i < CORES_N; i++)
     {
         printf("C%d\t", i);
@@ -177,24 +211,48 @@ void cpu_show(CPU_mon* cpumon)
 }
 
 
+void cpumon_exit(int sig)
+{
+    run = 0;
+}
+
+
+void setup_terminal() {
+    struct termios new_term;
+    tcgetattr(STDIN_FILENO, &original_term);
+    new_term = original_term;
+    new_term.c_lflag &= ~(ECHO | ICANON); 
+    printf("\033[?25l");
+    printf("\033[?1049h");
+    tcsetattr(STDIN_FILENO, TCSANOW, &new_term);
+}
+
+void restore_terminal() {
+    tcsetattr(STDIN_FILENO, TCSANOW, &original_term);
+    printf("\033[?25h");
+    printf("\033[?1049l");
+}
+
+
 int main()
 {
-    signal(SIGINT, handle_exit);
-    CPU_mon* cpumon = new_cpumon();
+    signal(SIGINT, cpumon_exit);
+
+    CPU_mon cpumon;
+    init_cpumon(&cpumon);
 
     int hwmon_cpu_id = get_coretemp_id();
-    printf("\033[?1049h");
-    while(1)
+    setup_terminal();
+    while(run)
     {
-
         printf("\033[H");
-        cpu_update(cpumon, hwmon_cpu_id);
-        cpu_show(cpumon);
+        cpu_update(&cpumon, hwmon_cpu_id);
+        cpu_show(&cpumon);
         usleep(500000);
-
     }
-    printf("\033[?1049l");
 
+    close(cpumon.fd_stat);
+    restore_terminal();
 
     return 0;
 }
