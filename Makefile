@@ -12,6 +12,9 @@ all: src/main.c src/utils.c $(HEADERS)
 cpumon:
 	$(CC) $(CFLAGS) $(OPCFLAGS) src/cpumon.c -o cpumon
 
+v_cpumon:
+	valgrind --track-origins=yes --track-fds=yes -s ./cpumon > /dev/null
+
 # Tests
 t: src/test.c src/utils.c $(HEADERS)
 	$(CC) $(CFLAGS) -g src/test.c src/utils.c -o test

@@ -23,20 +23,14 @@
 #define DELAY_mS 400
 
 // Colors
-#define BG_BTOP     "\033[48;5;232m"
-// O AZUL EXATO do "41" e "GHz" (Steel Blue / Cornflower Blue)
+#define BG_BLACK     "\033[48;5;232m"
 #define BTOP_BLUE   "\033[38;5;75m"
-// O CINZA para valores baixos/inativos (ex: 0% ou 2%)
 #define BTOP_DIM    "\033[38;5;242m"
-// O VERDE "Pastel" das barras e temperaturas normais
 #define BTOP_GREEN  "\033[38;5;113m"
-// O LARANJA dos pontos de alerta médio
 #define BTOP_ORANGE "\033[38;5;215m"
-// O VERMELHO do "98%" e perigo
 #define BTOP_RED    "\033[38;5;196m"
-// O BRANCO LEITOSO para textos principais
 #define BTOP_WHITE  "\033[38;5;253m"
-#define RESET       "\033[0m" BG_BTOP BTOP_WHITE
+#define RESET       "\033[0m" BG_BLACK BTOP_WHITE
 
 
 // ================================================================
@@ -48,22 +42,22 @@ typedef struct
 {
     uint64_t prev_total[CORES_N];
     uint64_t prev_idle[CORES_N];
-    long uptime;
+    uint32_t uptime;
 
     int fd_stat;
     int fd_temp[PHY_CORES_N];
     int fd_freq[CORES_N];
-    float load_avg[3];
+    uint32_t load_avg[3];
 
-    int16_t freq[CORES_N];
+    uint16_t freq[CORES_N];
     int8_t temp[CORES_N];
-    int8_t usage[CORES_N];
+    uint8_t usage[CORES_N];
 
 } CPU_mon;
 
-// =============================================================
-// ============================ CPU ============================
-// =============================================================
+// ===============================================================
+// ============================ UTILS ============================
+// ===============================================================
 int read_sysfs_int(int fd)
 {
     char buffer[16];
@@ -83,7 +77,39 @@ int read_sysfs_int(int fd)
     return val;
 }
 
-CPU_mon* init_cpumon(CPU_mon* cpumon, int hwmon_cpu_id)
+char* append_int(char *buffer, int val)
+{
+    if (val == 0)
+    {
+        *buffer++ = '0';
+        return buffer;
+    }
+
+    char temp[16];
+    int i = 0;
+    while (val > 0)
+    {
+        temp[i++] = (val % 10) + '0';
+        val /= 10;
+    }
+    while (i > 0)
+    {
+        *buffer++ = temp[--i];
+    }
+
+    return buffer;
+}
+
+char *append_str(char* buffer, const char* str)
+{
+    while (*str) *buffer++ = *str++;
+    return buffer;
+}
+
+// =============================================================
+// ============================ CPU ============================
+// =============================================================
+void init_cpumon(CPU_mon* cpumon, int hwmon_cpu_id)
 {
     memset(cpumon, 0, sizeof(CPU_mon));
     cpumon->fd_stat = open(STAT_PATH, O_RDONLY);
@@ -99,8 +125,17 @@ CPU_mon* init_cpumon(CPU_mon* cpumon, int hwmon_cpu_id)
         snprintf(path, sizeof(path), "/sys/devices/system/cpu/cpu%d/cpufreq/scaling_cur_freq", i);
         cpumon->fd_freq[i] = open(path, O_RDONLY);
     }
+}
 
-    return cpumon;
+void cleanup_cpumon(CPU_mon* cpumon)
+{
+    close(cpumon->fd_stat);
+
+    for(int i = 0; i < PHY_CORES_N; i++)
+        close(cpumon->fd_temp[i]);
+
+    for(int i = 0; i < CORES_N; i++)
+        close(cpumon->fd_freq[i]);
 }
 
 int get_coretemp_id()
@@ -247,11 +282,9 @@ void get_system_load(CPU_mon* cpumon)
 
     if (sysinfo(&si) == 0)
     {
-        const float load_scale = 1.0 / (1 << SI_LOAD_SHIFT); // 1.0 / 65536.0
-
-        cpumon->load_avg[0] = si.loads[0] * load_scale;
-        cpumon->load_avg[1] = si.loads[1] * load_scale;
-        cpumon->load_avg[2] = si.loads[2] * load_scale;
+        cpumon->load_avg[0] = si.loads[0];
+        cpumon->load_avg[1] = si.loads[1];
+        cpumon->load_avg[2] = si.loads[2];
         cpumon->uptime = si.uptime;
     }
 }
@@ -273,7 +306,7 @@ void setup_terminal() {
     new_term = original_term;
     new_term.c_lflag &= ~(ECHO | ICANON);
 
-    printf("\033[?1049h\033[?25l%s\033[2J\033[H", BG_BTOP);
+    printf("\033[?1049h\033[?25l%s\033[2J\033[H", BG_BLACK);
     tcsetattr(STDIN_FILENO, TCSANOW, &new_term);
 }
 
@@ -285,64 +318,98 @@ void restore_terminal() {
 
 void cpu_show(CPU_mon* cpumon)
 {
-    int offset = 0;
     char buffer[OUT_BUFF_LEN];
-    int buflen = sizeof(buffer);
+    char *c = buffer;
 
-    // Limpa e aplica fundo
-    offset += snprintf(buffer + offset, buflen - offset, "\033[3;1H%s", RESET);
+    c = append_str(c, "\033[3;1H");
+    c = append_str(c, RESET);
 
     for(int i = 0; i < CORES_N; i++)
     {
-        // 1. Label
-        offset += snprintf(buffer + offset, buflen - offset, "C%d", i);
+        // Label
+        c = append_str(c, "C");
+        c = append_int(c, i);
 
-        // 2. Frequência
-        float ghz = cpumon->freq[i] / 1000.0;
-        offset += snprintf(buffer + offset, buflen - offset, "\033[7G%.1f GHz", ghz);
+        // Frequência
+        int mhz = cpumon->freq[i];
+        c = append_str(c, "\033[7G");
+        c = append_int(c, mhz / 1000);
+        c = append_str(c, ".");
+        c = append_int(c, (mhz % 1000) / 100);
+        c = append_str(c, " GHz");
 
-        // 3. Temperatura
+        // Temperatura
         int temp_val = cpumon->temp[i];
         char* color_temp = BTOP_BLUE;
         if (temp_val >= 60) color_temp = BTOP_ORANGE;
         if (temp_val >= 80) color_temp = BTOP_RED;
 
-        offset += snprintf(buffer + offset, buflen - offset, "\033[18G%s%d%s°C", color_temp, temp_val, RESET);
+        c = append_str(c, "\033[18G");
+        c = append_str(c, color_temp);
+        c = append_int(c, temp_val);
+        c = append_str(c, RESET);
+        c = append_str(c, "°C");
 
-        // 4. Usage
+        // Usage
         int usage = cpumon->usage[i];
         char* color_usage = BTOP_GREEN;
         if (usage >= 50) color_usage = BTOP_ORANGE;
         if (usage >= 85) color_usage = BTOP_RED;
-        offset += snprintf(buffer + offset, buflen - offset, "\033[25G%s%3d%s%%\n", color_usage, usage, RESET);
+        c = append_str(c, "\033[25G ");
+        c = append_str(c, color_usage);
+        if (usage < 10)
+        {
+            *c++ = ' ';
+            *c++ = ' ';
+        }
+        else if (usage < 100)
+        {
+            *c++ = ' ';
+        }
+        c = append_int(c, usage);
+        c = append_str(c, RESET);
+        c = append_str(c, "%\n");
     }
 
-    // 1. Load AVG
-    char* load_col_1 = (cpumon->load_avg[0] > 2.0) ? BTOP_ORANGE : BTOP_WHITE;
-    char* load_col_5 = (cpumon->load_avg[1] > 2.0) ? BTOP_ORANGE : BTOP_WHITE;
-    char* load_col_15 = (cpumon->load_avg[2] > 2.0) ? BTOP_ORANGE : BTOP_WHITE;
+    // Load AVG
+    c = append_str(c, "\nLoad AVG:  ");
+    for(int k = 0; k < 3; k++) {
+        unsigned long raw = cpumon->load_avg[k];
 
-    offset += sprintf(buffer + offset,
-        "\n%sLoad AVG: %s%.2f %s%.2f %s%.2f%s\n",
-        BTOP_WHITE,
-        load_col_1, cpumon->load_avg[0],
-        load_col_5, cpumon->load_avg[1],
-        load_col_15, cpumon->load_avg[2],
-        RESET
-    );
+        int whole = raw >> 16;
+        int frac  = ((raw * 100) >> 16) % 100;
 
-    // 2. Uptime
+        char* l_color = (whole >= 2) ? BTOP_ORANGE : BTOP_WHITE;
+
+        c = append_str(c, l_color);
+        c = append_int(c, whole);
+        c = append_str(c, ".");
+
+        if (frac < 10) *c++ = '0';
+        c = append_int(c, frac);
+
+        if(k < 2) c = append_str(c, "   ");
+    }
+    c = append_str(c, RESET);
+
+    // Uptime
     long up = cpumon->uptime;
     int hours = up / 3600;
     int mins = (up % 3600) / 60;
     int secs = up % 60;
 
-    offset += sprintf(buffer + offset,
-        "%sUptime: %02d:%02d:%02d\n",
-        RESET, hours, mins, secs
-    );
+    c = append_str(c, "\nUptime: ");
+    if (hours < 10) c = append_str(c, "0");
+    c = append_int(c, hours);
+    c = append_str(c, ":");
+    if (mins < 10) c = append_str(c, "0");
+    c = append_int(c, mins);
+    c = append_str(c, ":");
+    if (secs < 10) c = append_str(c, "0");
+    c = append_int(c, secs);
 
-    if (write(STDOUT_FILENO, buffer, offset) == -1)
+    // print
+    if (write(STDOUT_FILENO, buffer, c - buffer) == -1)
         perror("write failed");
 }
 
@@ -373,7 +440,7 @@ int main()
         usleep(delay);
     }
 
-    close(cpumon.fd_stat);
+    cleanup_cpumon(&cpumon);
     restore_terminal();
 
     return 0;
