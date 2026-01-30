@@ -214,6 +214,7 @@ void parse_cpu_stats(CPU_mon* cpumon)
 {
     static char buffer[STAT_BUFF_LEN]  __attribute__((aligned(64)));
     ssize_t bytes_read = pread(cpumon->fd_stat, buffer, sizeof(buffer) - 1, 0);
+    if (bytes_read < 0) return;
 
     char *p = buffer;
     while (*p && *p != '\n') p++;
