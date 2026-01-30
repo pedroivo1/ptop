@@ -1,8 +1,7 @@
 #include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
 #include <unistd.h>
 #include <stdint.h>
+#include <string.h>
 #include <signal.h>
 #include <fcntl.h>
 #include <termios.h>
@@ -16,8 +15,9 @@
 
 // Paths & Buffers
 #define STAT_PATH "/proc/stat"
-#define STAT_BUFF_LEN 1024 // 1664 para poder rodar por anos
-#define OUT_BUFF_LEN 2048
+#define STAT_BUFF_LEN 2048
+#define OUT_BUFF_LEN 3072
+#define CORE_LABEL_NAME "coretemp"
 
 // Settings
 #define DELAY_mS 400
@@ -79,22 +79,22 @@ int read_sysfs_int(int fd)
 
 char* append_int(char *buffer, int val)
 {
-    if (val == 0)
-    {
+    if (val == 0) {
         *buffer++ = '0';
         return buffer;
     }
 
-    char temp[16];
-    int i = 0;
-    while (val > 0)
-    {
-        temp[i++] = (val % 10) + '0';
+    char* start = buffer;
+    while (val > 0) {
+        *buffer++ = (val % 10) + '0';
         val /= 10;
     }
-    while (i > 0)
-    {
-        *buffer++ = temp[--i];
+
+    char* end = buffer - 1;
+    while (start < end) {
+        char tmp_char = *start;
+        *start++ = *end;
+        *end-- = tmp_char;
     }
 
     return buffer;
@@ -115,14 +115,26 @@ void init_cpumon(CPU_mon* cpumon, int hwmon_cpu_id)
     cpumon->fd_stat = open(STAT_PATH, O_RDONLY);
 
     char path[64];
+    char *p;
     for(int i = 0; i < PHY_CORES_N; i++)
     {
-        snprintf(path, sizeof(path), "/sys/class/hwmon/hwmon%d/temp%d_input", hwmon_cpu_id, i+2);
+        p = path;
+        p = append_str(p, "/sys/class/hwmon/hwmon");
+        p = append_int(p, hwmon_cpu_id);
+        p = append_str(p, "/temp");
+        p = append_int(p, i+2);
+        p = append_str(p, "_input");
+        *p = '\0';
         cpumon->fd_temp[i] = open(path, O_RDONLY);
     }
     for(int i = 0; i < CORES_N; i++)
     {
         snprintf(path, sizeof(path), "/sys/devices/system/cpu/cpu%d/cpufreq/scaling_cur_freq", i);
+        p = path;
+        p = append_str(p, "/sys/devices/system/cpu/cpu");
+        p = append_int(p, i);
+        p = append_str(p, "/cpufreq/scaling_cur_freq\0");
+        *p = '\0';
         cpumon->fd_freq[i] = open(path, O_RDONLY);
     }
 }
@@ -150,10 +162,14 @@ int get_coretemp_id()
         ssize_t bytes_read = read(fd, buffer, sizeof(buffer) - 1);
         close(fd);
         if (bytes_read > 0) buffer[bytes_read] = '\0';
-        if(strstr(buffer, "coretemp") != NULL)
+
+        char *p = buffer;
+        int j = 0;
+        while ( *p && j < 8)
         {
-            return i;
+            if (*p++ != CORE_LABEL_NAME[j++]) break;
         }
+        if (j == 8) return i;
     }
 
     return -1;
@@ -176,7 +192,7 @@ void get_core_freq_mhz(CPU_mon* cpumon)
 
 void parse_cpu_stats(CPU_mon* cpumon)
 {
-    char buffer[STAT_BUFF_LEN];
+    static char buffer[STAT_BUFF_LEN]  __attribute__((aligned(64)));
 
     ssize_t bytes_read = read(cpumon->fd_stat, buffer, STAT_BUFF_LEN - 1);
     lseek(cpumon->fd_stat, 0, SEEK_SET);
@@ -318,61 +334,57 @@ void restore_terminal() {
 
 void cpu_show(CPU_mon* cpumon)
 {
-    char buffer[OUT_BUFF_LEN];
-    char *c = buffer;
+    static char buffer[OUT_BUFF_LEN] __attribute__((aligned(64)));
+    char *p = buffer;
 
-    c = append_str(c, "\033[3;1H");
-    c = append_str(c, RESET);
+    p = append_str(p, "\033[3;1H");
+    p = append_str(p, RESET);
 
     for(int i = 0; i < CORES_N; i++)
     {
         // Label
-        c = append_str(c, "C");
-        c = append_int(c, i);
+        p = append_str(p, "C");
+        p = append_int(p, i);
 
         // Frequência
         int mhz = cpumon->freq[i];
-        c = append_str(c, "\033[7G");
-        c = append_int(c, mhz / 1000);
-        c = append_str(c, ".");
-        c = append_int(c, (mhz % 1000) / 100);
-        c = append_str(c, " GHz");
+        p = append_str(p, "\033[7G");
+        p = append_int(p, mhz / 1000);
+        p = append_str(p, ".");
+        p = append_int(p, (mhz % 1000) / 100);
+        p = append_str(p, " GHz");
 
         // Temperatura
         int temp_val = cpumon->temp[i];
-        char* color_temp = BTOP_BLUE;
-        if (temp_val >= 60) color_temp = BTOP_ORANGE;
-        if (temp_val >= 80) color_temp = BTOP_RED;
+        char* color_temp = (temp_val < 60) ? BTOP_BLUE : (temp_val < 80) ? BTOP_ORANGE : BTOP_RED;
 
-        c = append_str(c, "\033[18G");
-        c = append_str(c, color_temp);
-        c = append_int(c, temp_val);
-        c = append_str(c, RESET);
-        c = append_str(c, "°C");
+        p = append_str(p, "\033[18G");
+        p = append_str(p, color_temp);
+        p = append_int(p, temp_val);
+        p = append_str(p, RESET);
+        p = append_str(p, "°C");
 
         // Usage
         int usage = cpumon->usage[i];
-        char* color_usage = BTOP_GREEN;
-        if (usage >= 50) color_usage = BTOP_ORANGE;
-        if (usage >= 85) color_usage = BTOP_RED;
-        c = append_str(c, "\033[25G ");
-        c = append_str(c, color_usage);
+        char* color_usage = (usage < 50) ? BTOP_GREEN : (usage < 85) ? BTOP_ORANGE : BTOP_RED;
+        p = append_str(p, "\033[25G ");
+        p = append_str(p, color_usage);
         if (usage < 10)
         {
-            *c++ = ' ';
-            *c++ = ' ';
+            *p++ = ' ';
+            *p++ = ' ';
         }
         else if (usage < 100)
         {
-            *c++ = ' ';
+            *p++ = ' ';
         }
-        c = append_int(c, usage);
-        c = append_str(c, RESET);
-        c = append_str(c, "%\n");
+        p = append_int(p, usage);
+        p = append_str(p, RESET);
+        p = append_str(p, "%\n");
     }
 
     // Load AVG
-    c = append_str(c, "\nLoad AVG:  ");
+    p = append_str(p, "\nLoad AVG:  ");
     for(int k = 0; k < 3; k++) {
         unsigned long raw = cpumon->load_avg[k];
 
@@ -381,16 +393,16 @@ void cpu_show(CPU_mon* cpumon)
 
         char* l_color = (whole >= 2) ? BTOP_ORANGE : BTOP_WHITE;
 
-        c = append_str(c, l_color);
-        c = append_int(c, whole);
-        c = append_str(c, ".");
+        p = append_str(p, l_color);
+        p = append_int(p, whole);
+        p = append_str(p, ".");
 
-        if (frac < 10) *c++ = '0';
-        c = append_int(c, frac);
+        if (frac < 10) *p++ = '0';
+        p = append_int(p, frac);
 
-        if(k < 2) c = append_str(c, "   ");
+        if(k < 2) p = append_str(p, "   ");
     }
-    c = append_str(c, RESET);
+    p = append_str(p, RESET);
 
     // Uptime
     long up = cpumon->uptime;
@@ -398,18 +410,18 @@ void cpu_show(CPU_mon* cpumon)
     int mins = (up % 3600) / 60;
     int secs = up % 60;
 
-    c = append_str(c, "\nUptime: ");
-    if (hours < 10) c = append_str(c, "0");
-    c = append_int(c, hours);
-    c = append_str(c, ":");
-    if (mins < 10) c = append_str(c, "0");
-    c = append_int(c, mins);
-    c = append_str(c, ":");
-    if (secs < 10) c = append_str(c, "0");
-    c = append_int(c, secs);
+    p = append_str(p, "\nUptime: ");
+    if (hours < 10) p = append_str(p, "0");
+    p = append_int(p, hours);
+    p = append_str(p, ":");
+    if (mins < 10) p = append_str(p, "0");
+    p = append_int(p, mins);
+    p = append_str(p, ":");
+    if (secs < 10) p = append_str(p, "0");
+    p = append_int(p, secs);
 
     // print
-    if (write(STDOUT_FILENO, buffer, c - buffer) == -1)
+    if (write(STDOUT_FILENO, buffer, p - buffer) == -1)
         perror("write failed");
 }
 

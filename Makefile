@@ -1,7 +1,6 @@
 CC = gcc
 CFLAGS = -Wall -I.
-OPCFLAGS = -O3 -march=native -fno-stack-protector -flto
-HEADERS = src/utils.h src/config.h
+OPCFLAGS = -O3 -march=native -fno-stack-protector -flto -s
 
 .PHONY: all run test clean cpumon
 
