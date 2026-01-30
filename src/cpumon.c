@@ -7,6 +7,8 @@
 #include <termios.h>
 #include <sys/sysinfo.h>
 
+#define APPEND_LIT(buf, str) (memcpy(buf, str, sizeof(str)-1), buf + sizeof(str)-1)
+
 // Hardware Definitions
 #define MODEL "i7-10750H"
 #define CORES_N 12
@@ -58,16 +60,14 @@ typedef struct
 // ===============================================================
 // ============================ UTILS ============================
 // ===============================================================
-int read_sysfs_int(int fd)
+static inline int read_sysfs_int(int fd)
 {
     char buffer[16];
     int val = 0;
-    ssize_t bytes_read = read(fd, buffer, sizeof(buffer) - 1);
-    lseek(fd, 0, SEEK_SET);
+    ssize_t bytes_read = pread(fd, buffer, sizeof(buffer) - 1, 0);
 
     if (bytes_read > 0)
     {
-        buffer[bytes_read] = '\0';
         char *p = buffer;
         while (*p >= '0' && *p <= '9')
         {
@@ -77,7 +77,7 @@ int read_sysfs_int(int fd)
     return val;
 }
 
-char* append_int(char *buffer, int val)
+static inline char* append_int(char *buffer, int val)
 {
     if (val == 0) {
         *buffer++ = '0';
@@ -100,7 +100,28 @@ char* append_int(char *buffer, int val)
     return buffer;
 }
 
-char *append_str(char* buffer, const char* str)
+static inline char* append_int_fast(char *buffer, int val)
+{
+    if (val == 0)
+    {
+        *buffer++ = '0';
+        return buffer;
+    }
+    char temp[12];
+    char *p_temp = temp;
+
+    while (val > 0) {
+        *p_temp++ = (val % 10) + '0';
+        val /= 10;
+    }
+
+    while (p_temp > temp) {
+        *buffer++ = *--p_temp;
+    }
+    return buffer;
+}
+
+static inline char *append_str(char* buffer, const char* str)
 {
     while (*str) *buffer++ = *str++;
     return buffer;
@@ -120,19 +141,18 @@ void init_cpumon(CPU_mon* cpumon, int hwmon_cpu_id)
     {
         p = path;
         p = append_str(p, "/sys/class/hwmon/hwmon");
-        p = append_int(p, hwmon_cpu_id);
+        p = append_int_fast(p, hwmon_cpu_id);
         p = append_str(p, "/temp");
-        p = append_int(p, i+2);
+        p = append_int_fast(p, i+2);
         p = append_str(p, "_input");
         *p = '\0';
         cpumon->fd_temp[i] = open(path, O_RDONLY);
     }
     for(int i = 0; i < CORES_N; i++)
     {
-        snprintf(path, sizeof(path), "/sys/devices/system/cpu/cpu%d/cpufreq/scaling_cur_freq", i);
         p = path;
         p = append_str(p, "/sys/devices/system/cpu/cpu");
-        p = append_int(p, i);
+        p = append_int_fast(p, i);
         p = append_str(p, "/cpufreq/scaling_cur_freq\0");
         *p = '\0';
         cpumon->fd_freq[i] = open(path, O_RDONLY);
@@ -193,102 +213,66 @@ void get_core_freq_mhz(CPU_mon* cpumon)
 void parse_cpu_stats(CPU_mon* cpumon)
 {
     static char buffer[STAT_BUFF_LEN]  __attribute__((aligned(64)));
-
-    ssize_t bytes_read = read(cpumon->fd_stat, buffer, STAT_BUFF_LEN - 1);
-    lseek(cpumon->fd_stat, 0, SEEK_SET);
-
-    buffer[bytes_read] = '\0';
+    ssize_t bytes_read = pread(cpumon->fd_stat, buffer, sizeof(buffer) - 1, 0);
 
     char *p = buffer;
-    while (*p)
+    while (*p && *p != '\n') p++;
+    if (*p == '\n') p++;
+    for (int cpu_id = 0; cpu_id < CORES_N; cpu_id++)
     {
-        if (p[0] == 'c' && p[1] ==  'p' && p[2] == 'u')
-        {
-            if (p[3] >= '0' && p[3] <= '9')
-            {
-                p += 3;
+        if (p[0] != 'c' || p[1] != 'p' || p[2] != 'u') break;
 
-                int cpu_id = 0;
-                while (*p >= '0' && *p <= '9')
-                {
-                    cpu_id = (cpu_id * 10) + (*p - '0');
-                    p++;
-                }
+        p += 3;
+        while (*p >= '0') p++;
+        while (*p == ' ') p++;
 
-                if (cpu_id < CORES_N)
-                {
+        uint64_t active = 0;
+        uint64_t total_idle = 0;
+        uint64_t val;
 
-                    uint64_t active = 0;
-                    uint64_t total_idle = 0;
-                    uint64_t val;
-
-                    // /proc/stat: user, nice, system, idle, iowait, irq, softirq, steal
-                    // Column 0: User (Active)
-                    while (*p == ' ') p++;
-                    val = 0;
-                    while (*p >= '0' && *p <= '9') val = (val * 10) + (*p++ - '0');
-                    active += val;
-
-                    // Column 1: Nice (Active)
-                    while (*p == ' ') p++;
-                    val = 0;
-                    while (*p >= '0' && *p <= '9') val = (val * 10) + (*p++ - '0');
-                    active += val;
-
-                    // Column 2: System (Active)
-                    while (*p == ' ') p++;
-                    val = 0;
-                    while (*p >= '0' && *p <= '9') val = (val * 10) + (*p++ - '0');
-                    active += val;
-
-                    // Column 3: Idle (Idle)
-                    while (*p == ' ') p++;
-                    val = 0;
-                    while (*p >= '0' && *p <= '9') val = (val * 10) + (*p++ - '0');
-                    total_idle += val;
-
-                    // Column 4: IOwait (Idle)
-                    while (*p == ' ') p++;
-                    val = 0;
-                    while (*p >= '0' && *p <= '9') val = (val * 10) + (*p++ - '0');
-                    total_idle += val;
-
-                    // Column 5: Irq (Active)
-                    while (*p == ' ') p++;
-                    val = 0;
-                    while (*p >= '0' && *p <= '9') val = (val * 10) + (*p++ - '0');
-                    active += val;
-
-                    // Column 6: SoftIrq (Active)
-                    while (*p == ' ') p++;
-                    val = 0;
-                    while (*p >= '0' && *p <= '9') val = (val * 10) + (*p++ - '0');
-                    active += val;
-
-                    // Column 7: Steal (Active)
-                    while (*p == ' ') p++;
-                    val = 0;
-                    while (*p >= '0' && *p <= '9') val = (val * 10) + (*p++ - '0');
-                    active += val;
-
-                    uint64_t total = active + total_idle;
-                    uint64_t diff_total = total - cpumon->prev_total[cpu_id];
-                    uint64_t diff_idle  = total_idle - cpumon->prev_idle[cpu_id];
-
-                    if (diff_total > 0)
-                        cpumon->usage[cpu_id] = (int8_t)((diff_total - diff_idle) * 100 / diff_total);
-
-                    cpumon->prev_total[cpu_id] = total;
-                    cpumon->prev_idle[cpu_id] = total_idle;
-                }
+        // User, Nice, System
+        for(int k=0; k<3; k++) {
+            val = 0;
+            while (*p >= '0') {
+                val = (val * 10) + (*p++ - '0');
             }
+            active += val;
+            while (*p == ' ') p++;
         }
-        else
-        {
-            break;
+
+        // Idle, IOWait
+        for(int k=0; k<2; k++) {
+            val = 0;
+            while (*p >= '0') {
+                val = (val * 10) + (*p++ - '0');
+            }
+            total_idle += val;
+            while (*p == ' ') p++;
         }
+
+        // Irq, SoftIrq, Steal
+        for(int k=0; k<3; k++) {
+            val = 0;
+            while (*p >= '0') {
+                val = (val * 10) + (*p++ - '0');
+            }
+            active += val;
+            while (*p == ' ') p++; 
+        }
+
         while (*p && *p != '\n') p++;
         if (*p == '\n') p++;
+
+        uint64_t total = active + total_idle;
+        uint64_t diff_total = total - cpumon->prev_total[cpu_id];
+        uint64_t diff_idle  = total_idle - cpumon->prev_idle[cpu_id];
+
+        if (diff_total > 0) {
+            cpumon->usage[cpu_id] = (uint8_t)((diff_total - diff_idle) * 100 / diff_total);
+        }
+
+        cpumon->prev_total[cpu_id] = total;
+        cpumon->prev_idle[cpu_id] = total_idle;
     }
 }
 
@@ -337,37 +321,37 @@ void cpu_show(CPU_mon* cpumon)
     static char buffer[OUT_BUFF_LEN] __attribute__((aligned(64)));
     char *p = buffer;
 
-    p = append_str(p, "\033[3;1H");
-    p = append_str(p, RESET);
+    p = APPEND_LIT(p, "\033[3;1H");
+    p = APPEND_LIT(p, RESET);
 
     for(int i = 0; i < CORES_N; i++)
     {
         // Label
-        p = append_str(p, "C");
-        p = append_int(p, i);
+        p = APPEND_LIT(p, "C");
+        p = append_int_fast(p, i);
 
         // Frequência
         int mhz = cpumon->freq[i];
-        p = append_str(p, "\033[7G");
-        p = append_int(p, mhz / 1000);
-        p = append_str(p, ".");
-        p = append_int(p, (mhz % 1000) / 100);
-        p = append_str(p, " GHz");
+        p = APPEND_LIT(p, "\033[7G");
+        p = append_int_fast(p, mhz / 1000);
+        p = APPEND_LIT(p, ".");
+        p = append_int_fast(p, (mhz % 1000) / 100);
+        p = APPEND_LIT(p, " GHz");
 
         // Temperatura
         int temp_val = cpumon->temp[i];
         char* color_temp = (temp_val < 60) ? BTOP_BLUE : (temp_val < 80) ? BTOP_ORANGE : BTOP_RED;
 
-        p = append_str(p, "\033[18G");
+        p = APPEND_LIT(p, "\033[18G");
         p = append_str(p, color_temp);
-        p = append_int(p, temp_val);
-        p = append_str(p, RESET);
-        p = append_str(p, "°C");
+        p = append_int_fast(p, temp_val);
+        p = APPEND_LIT(p, RESET);
+        p = APPEND_LIT(p, "°C");
 
         // Usage
         int usage = cpumon->usage[i];
         char* color_usage = (usage < 50) ? BTOP_GREEN : (usage < 85) ? BTOP_ORANGE : BTOP_RED;
-        p = append_str(p, "\033[25G ");
+        p = APPEND_LIT(p, "\033[25G ");
         p = append_str(p, color_usage);
         if (usage < 10)
         {
@@ -378,9 +362,9 @@ void cpu_show(CPU_mon* cpumon)
         {
             *p++ = ' ';
         }
-        p = append_int(p, usage);
+        p = append_int_fast(p, usage);
         p = append_str(p, RESET);
-        p = append_str(p, "%\n");
+        p = APPEND_LIT(p, "%\n");
     }
 
     // Load AVG
@@ -394,11 +378,11 @@ void cpu_show(CPU_mon* cpumon)
         char* l_color = (whole >= 2) ? BTOP_ORANGE : BTOP_WHITE;
 
         p = append_str(p, l_color);
-        p = append_int(p, whole);
+        p = append_int_fast(p, whole);
         p = append_str(p, ".");
 
         if (frac < 10) *p++ = '0';
-        p = append_int(p, frac);
+        p = append_int_fast(p, frac);
 
         if(k < 2) p = append_str(p, "   ");
     }
@@ -412,13 +396,13 @@ void cpu_show(CPU_mon* cpumon)
 
     p = append_str(p, "\nUptime: ");
     if (hours < 10) p = append_str(p, "0");
-    p = append_int(p, hours);
+    p = append_int_fast(p, hours);
     p = append_str(p, ":");
     if (mins < 10) p = append_str(p, "0");
-    p = append_int(p, mins);
+    p = append_int_fast(p, mins);
     p = append_str(p, ":");
     if (secs < 10) p = append_str(p, "0");
-    p = append_int(p, secs);
+    p = append_int_fast(p, secs);
 
     // print
     if (write(STDOUT_FILENO, buffer, p - buffer) == -1)
