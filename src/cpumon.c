@@ -6,35 +6,82 @@
 #include <signal.h>
 #include <fcntl.h>
 #include <termios.h>
+#include <sys/sysinfo.h>
 
+// Hardware Definitions
+#define MODEL "i7-10750H"
 #define CORES_N 12
 #define PHY_CORES_N 6
-#define MODEL_LEN 9
-#define MODEL "i7-10750H"
 #define HWMON_N 9
-#define STAT_BUFF_LEN 1664
+
+// Paths & Buffers
 #define STAT_PATH "/proc/stat"
+#define STAT_BUFF_LEN 1024 // 1664 para poder rodar por anos
+#define OUT_BUFF_LEN 2048
+
+// Settings
 #define DELAY_mS 400
-#define OUT_BUFF_LEN 512
 
+// Colors
+#define BG_BTOP     "\033[48;5;232m"
+// O AZUL EXATO do "41" e "GHz" (Steel Blue / Cornflower Blue)
+#define BTOP_BLUE   "\033[38;5;75m"
+// O CINZA para valores baixos/inativos (ex: 0% ou 2%)
+#define BTOP_DIM    "\033[38;5;242m"
+// O VERDE "Pastel" das barras e temperaturas normais
+#define BTOP_GREEN  "\033[38;5;113m"
+// O LARANJA dos pontos de alerta médio
+#define BTOP_ORANGE "\033[38;5;215m"
+// O VERMELHO do "98%" e perigo
+#define BTOP_RED    "\033[38;5;196m"
+// O BRANCO LEITOSO para textos principais
+#define BTOP_WHITE  "\033[38;5;253m"
+#define RESET       "\033[0m" BG_BTOP BTOP_WHITE
+
+
+// ================================================================
+// ============================ GLOBAL ============================
+// ================================================================
 volatile sig_atomic_t run = 1;
-
 struct termios original_term;
-
 typedef struct
 {
     uint64_t prev_total[CORES_N];
     uint64_t prev_idle[CORES_N];
+    long uptime;
 
     int fd_stat;
     int fd_temp[PHY_CORES_N];
     int fd_freq[CORES_N];
+    float load_avg[3];
 
     int16_t freq[CORES_N];
     int8_t temp[CORES_N];
     int8_t usage[CORES_N];
 
 } CPU_mon;
+
+// =============================================================
+// ============================ CPU ============================
+// =============================================================
+int read_sysfs_int(int fd)
+{
+    char buffer[16];
+    int val = 0;
+    ssize_t bytes_read = read(fd, buffer, sizeof(buffer) - 1);
+    lseek(fd, 0, SEEK_SET);
+
+    if (bytes_read > 0)
+    {
+        buffer[bytes_read] = '\0';
+        char *p = buffer;
+        while (*p >= '0' && *p <= '9')
+        {
+            val = (val * 10) + (*p++ - '0');
+        }
+    }
+    return val;
+}
 
 CPU_mon* init_cpumon(CPU_mon* cpumon, int hwmon_cpu_id)
 {
@@ -56,6 +103,41 @@ CPU_mon* init_cpumon(CPU_mon* cpumon, int hwmon_cpu_id)
     return cpumon;
 }
 
+int get_coretemp_id()
+{
+    char path[32];
+    char buffer[32];
+
+    for(int i = 0; i < HWMON_N; i++)
+    {
+        snprintf(path, sizeof(path), "/sys/class/hwmon/hwmon%d/name", i);
+        int fd = open(path, O_RDONLY);
+        ssize_t bytes_read = read(fd, buffer, sizeof(buffer) - 1);
+        close(fd);
+        if (bytes_read > 0) buffer[bytes_read] = '\0';
+        if(strstr(buffer, "coretemp") != NULL)
+        {
+            return i;
+        }
+    }
+
+    return -1;
+}
+
+void get_core_temp_c(CPU_mon* cpumon)
+{
+    for(int i = 0; i < PHY_CORES_N; i++)
+    {
+        cpumon->temp[i] = read_sysfs_int(cpumon->fd_temp[i]) / 1000;
+        cpumon->temp[i+PHY_CORES_N] = cpumon->temp[i];
+    }
+}
+
+void get_core_freq_mhz(CPU_mon* cpumon)
+{
+    for(int i = 0; i < CORES_N; i++)
+        cpumon->freq[i] = read_sysfs_int(cpumon->fd_freq[i]) / 1000;
+}
 
 void parse_cpu_stats(CPU_mon* cpumon)
 {
@@ -84,7 +166,7 @@ void parse_cpu_stats(CPU_mon* cpumon)
 
                 if (cpu_id < CORES_N)
                 {
-                    
+
                     uint64_t active = 0;
                     uint64_t total_idle = 0;
                     uint64_t val;
@@ -148,68 +230,30 @@ void parse_cpu_stats(CPU_mon* cpumon)
                     cpumon->prev_total[cpu_id] = total;
                     cpumon->prev_idle[cpu_id] = total_idle;
                 }
-                if (cpu_id >= CORES_N) break;
             }
+        }
+        else
+        {
+            break;
         }
         while (*p && *p != '\n') p++;
         if (*p == '\n') p++;
     }
 }
 
-int get_coretemp_id()
+void get_system_load(CPU_mon* cpumon)
 {
-    char path[32];
-    char buffer[32];
+    struct sysinfo si;
 
-    for(int i = 0; i < HWMON_N; i++)
+    if (sysinfo(&si) == 0)
     {
-        snprintf(path, sizeof(path), "/sys/class/hwmon/hwmon%d/name", i);
-        int fd = open(path, O_RDONLY);
-        ssize_t bytes_read = read(fd, buffer, sizeof(buffer) - 1);
-        close(fd);
-        if (bytes_read > 0) buffer[bytes_read] = '\0';
-        if(strstr(buffer, "coretemp") != NULL)
-        {
-            return i;
-        }
+        const float load_scale = 1.0 / (1 << SI_LOAD_SHIFT); // 1.0 / 65536.0
+
+        cpumon->load_avg[0] = si.loads[0] * load_scale;
+        cpumon->load_avg[1] = si.loads[1] * load_scale;
+        cpumon->load_avg[2] = si.loads[2] * load_scale;
+        cpumon->uptime = si.uptime;
     }
-
-    return -1;
-}
-
-
-int read_sysfs_int(int fd)
-{
-    char buffer[16];
-    int val = 0;
-    ssize_t bytes_read = read(fd, buffer, sizeof(buffer) - 1);
-    lseek(fd, 0, SEEK_SET);
-
-    if (bytes_read > 0)
-    {
-        buffer[bytes_read] = '\0';
-        char *p = buffer;
-        while (*p >= '0' && *p <= '9')
-        {
-            val = (val * 10) + (*p++ - '0');
-        }
-    }
-    return val;
-}
-
-void get_core_temp_c(CPU_mon* cpumon)
-{
-    for(int i = 0; i < PHY_CORES_N; i++)
-    {
-        cpumon->temp[i] = read_sysfs_int(cpumon->fd_temp[i]) / 1000;
-        cpumon->temp[i+PHY_CORES_N] = cpumon->temp[i];
-    }
-}
-
-void get_core_freq_mhz(CPU_mon* cpumon)
-{
-    for(int i = 0; i < CORES_N; i++)
-        cpumon->freq[i] = read_sysfs_int(cpumon->fd_freq[i]) / 1000;
 }
 
 void cpu_update(CPU_mon* cpumon, int hwmon_cpu_id)
@@ -217,46 +261,98 @@ void cpu_update(CPU_mon* cpumon, int hwmon_cpu_id)
     get_core_freq_mhz(cpumon);
     get_core_temp_c(cpumon);
     parse_cpu_stats(cpumon);
+    get_system_load(cpumon);
+}
+
+// =============================================================
+// ============================ TUI ============================
+// =============================================================
+void setup_terminal() {
+    struct termios new_term;
+    tcgetattr(STDIN_FILENO, &original_term);
+    new_term = original_term;
+    new_term.c_lflag &= ~(ECHO | ICANON);
+
+    printf("\033[?1049h\033[?25l%s\033[2J\033[H", BG_BTOP);
+    tcsetattr(STDIN_FILENO, TCSANOW, &new_term);
+}
+
+void restore_terminal() {
+    printf("\033[0m\033[?1049l\033[?25h");
+    fflush(stdout);
+    tcsetattr(STDIN_FILENO, TCSANOW, &original_term);
 }
 
 void cpu_show(CPU_mon* cpumon)
 {
     int offset = 0;
     char buffer[OUT_BUFF_LEN];
+    int buflen = sizeof(buffer);
 
-    offset += sprintf(buffer + offset, "\033[3;1H");
+    // Limpa e aplica fundo
+    offset += snprintf(buffer + offset, buflen - offset, "\033[3;1H%s", RESET);
+
     for(int i = 0; i < CORES_N; i++)
     {
-        offset += sprintf(buffer + offset, "C%d", i);
-        offset += sprintf(buffer + offset, "\033[7G%.1f GHz", cpumon->freq[i] / 1000.0);
-        offset += sprintf(buffer + offset, "\033[18G%d°C", cpumon->temp[i]);
-        offset += sprintf(buffer + offset, "\033[25G%3d%%\n", cpumon->usage[i]);
+        // 1. Label
+        offset += snprintf(buffer + offset, buflen - offset, "C%d", i);
+
+        // 2. Frequência
+        float ghz = cpumon->freq[i] / 1000.0;
+        offset += snprintf(buffer + offset, buflen - offset, "\033[7G%.1f GHz", ghz);
+
+        // 3. Temperatura
+        int temp_val = cpumon->temp[i];
+        char* color_temp = BTOP_BLUE;
+        if (temp_val >= 60) color_temp = BTOP_ORANGE;
+        if (temp_val >= 80) color_temp = BTOP_RED;
+
+        offset += snprintf(buffer + offset, buflen - offset, "\033[18G%s%d%s°C", color_temp, temp_val, RESET);
+
+        // 4. Usage
+        int usage = cpumon->usage[i];
+        char* color_usage = BTOP_GREEN;
+        if (usage >= 50) color_usage = BTOP_ORANGE;
+        if (usage >= 85) color_usage = BTOP_RED;
+        offset += snprintf(buffer + offset, buflen - offset, "\033[25G%s%3d%s%%\n", color_usage, usage, RESET);
     }
 
-    write(STDOUT_FILENO, buffer, offset);
+    // 1. Load AVG
+    char* load_col_1 = (cpumon->load_avg[0] > 2.0) ? BTOP_ORANGE : BTOP_WHITE;
+    char* load_col_5 = (cpumon->load_avg[1] > 2.0) ? BTOP_ORANGE : BTOP_WHITE;
+    char* load_col_15 = (cpumon->load_avg[2] > 2.0) ? BTOP_ORANGE : BTOP_WHITE;
+
+    offset += sprintf(buffer + offset,
+        "\n%sLoad AVG: %s%.2f %s%.2f %s%.2f%s\n",
+        BTOP_WHITE,
+        load_col_1, cpumon->load_avg[0],
+        load_col_5, cpumon->load_avg[1],
+        load_col_15, cpumon->load_avg[2],
+        RESET
+    );
+
+    // 2. Uptime
+    long up = cpumon->uptime;
+    int hours = up / 3600;
+    int mins = (up % 3600) / 60;
+    int secs = up % 60;
+
+    offset += sprintf(buffer + offset,
+        "%sUptime: %02d:%02d:%02d\n",
+        RESET, hours, mins, secs
+    );
+
+    if (write(STDOUT_FILENO, buffer, offset) == -1)
+        perror("write failed");
 }
 
-
+// ==============================================================
+// ============================ MAIN ============================
+// ==============================================================
 void cpumon_exit(int sig)
 {
     run = 0;
 }
-
-
-void setup_terminal() {
-    struct termios new_term;
-    tcgetattr(STDIN_FILENO, &original_term);
-    new_term = original_term;
-    new_term.c_lflag &= ~(ECHO | ICANON); 
-    printf("\033[?25l\033[?1049h");
-    tcsetattr(STDIN_FILENO, TCSANOW, &new_term);
-}
-
-void restore_terminal() {
-    tcsetattr(STDIN_FILENO, TCSANOW, &original_term);
-    printf("\033[?25h\033[?1049l");
-}
-
 
 int main()
 {
@@ -269,7 +365,7 @@ int main()
     int delay = DELAY_mS*1000;
 
     setup_terminal();
-    printf("\033[H%s\t%dms\n", MODEL, DELAY_mS);
+    printf("\033[H%s%s\t%dms\n", RESET, MODEL, DELAY_mS);
     while(run)
     {
         cpu_update(&cpumon, hwmon_cpu_id);
