@@ -25,14 +25,61 @@
 #define DELAY_mS 400
 
 // Colors
-#define BG_BLACK     "\033[48;5;232m"
+#define BG_BLACK    "\033[48;5;232m"
 #define BTOP_BLUE   "\033[38;5;75m"
 #define BTOP_DIM    "\033[38;5;242m"
 #define BTOP_GREEN  "\033[38;5;113m"
 #define BTOP_ORANGE "\033[38;5;215m"
 #define BTOP_RED    "\033[38;5;196m"
 #define BTOP_WHITE  "\033[38;5;253m"
-#define RESET       "\033[0m" BG_BLACK BTOP_WHITE
+#define PRESET       "\033[0m" BG_BLACK BTOP_WHITE
+#define BOLD        "\033[1m"
+
+// --- TEMPERATURE (-128 to +127) ---
+// Logic: 16 steps using (val + 128) >> 4
+
+// Negative Range (Cold -> Cool)
+#define TEMP_0   "\033[38;5;21m"   // [-128 to -113]
+#define TEMP_1   "\033[38;5;27m"   // [-112 to  -97]
+#define TEMP_2   "\033[38;5;33m"   // [ -96 to  -81]
+#define TEMP_3   "\033[38;5;39m"   // [ -80 to  -65]
+#define TEMP_4   "\033[38;5;45m"   // [ -64 to  -49]
+#define TEMP_5   "\033[38;5;51m"   // [ -48 to  -33]
+#define TEMP_6   "\033[38;5;49m"   // [ -32 to  -17]
+#define TEMP_7   "\033[38;5;47m"   // [ -16 to   -1]
+
+// Positive Range (Green -> Yellow -> Red)
+#define TEMP_8   "\033[38;5;82m"   // [   0 to   15]
+#define TEMP_9   "\033[38;5;154m"  // [  16 to   31]
+#define TEMP_10  "\033[38;5;190m"  // [  32 to   47]
+#define TEMP_11  "\033[38;5;226m"  // [  48 to   63]
+#define TEMP_12  "\033[38;5;214m"  // [  64 to   79]
+#define TEMP_13  "\033[38;5;202m"  // [  80 to   95]
+#define TEMP_14  "\033[38;5;196m"  // [  96 to  111]
+#define TEMP_15  "\033[38;5;124m"  // [ 112 to  127]
+
+static const char* ctemp[16] = {
+    TEMP_0, TEMP_1, TEMP_2, TEMP_3, TEMP_4, TEMP_5, TEMP_6, TEMP_7,
+    TEMP_8, TEMP_9, TEMP_10, TEMP_11, TEMP_12, TEMP_13, TEMP_14, TEMP_15
+};
+
+// --- PERCENTAGE (0% to 100%) ---
+// Logic: index = value >> 4
+// 100% falls into PERC_6 (96-111)
+#define PERC_0   "\033[38;5;46m"   // [  0 -  15]
+#define PERC_1   "\033[38;5;118m"  // [ 16 -  31]
+#define PERC_2   "\033[38;5;190m"  // [ 32 -  47]
+#define PERC_3   "\033[38;5;226m"  // [ 48 -  63]
+#define PERC_4   "\033[38;5;214m"  // [ 64 -  79]
+#define PERC_5   "\033[38;5;196m"  // [ 80 -  95]
+#define PERC_6   "\033[38;5;196m"  // [ 96 - 111]
+#define PERC_7   "\033[38;5;93m"   // [112 - 127]
+
+static const char* cperc[8] = {
+    PERC_0, PERC_1, PERC_2,
+    PERC_3, PERC_4, PERC_5,
+    PERC_6, PERC_7
+};
 
 
 // ================================================================
@@ -153,7 +200,7 @@ void init_cpumon(CPU_mon* cpumon, int hwmon_cpu_id)
         p = path;
         p = append_str(p, "/sys/devices/system/cpu/cpu");
         p = append_int_fast(p, i);
-        p = append_str(p, "/cpufreq/scaling_cur_freq\0");
+        p = append_str(p, "/cpufreq/scaling_cur_freq");
         *p = '\0';
         cpumon->fd_freq[i] = open(path, O_RDONLY);
     }
@@ -174,10 +221,15 @@ int get_coretemp_id()
 {
     char path[32];
     char buffer[32];
+    char *p;
 
     for(int i = 0; i < HWMON_N; i++)
     {
-        snprintf(path, sizeof(path), "/sys/class/hwmon/hwmon%d/name", i);
+        p = path;
+        p = append_str(p, "/sys/class/hwmon/hwmon");
+        p = append_int_fast(p, i);
+        p = append_str(p, "/name");
+        *p = '\0';
         int fd = open(path, O_RDONLY);
         ssize_t bytes_read = read(fd, buffer, sizeof(buffer) - 1);
         close(fd);
@@ -223,9 +275,9 @@ void parse_cpu_stats(CPU_mon* cpumon)
     {
         if (p[0] != 'c' || p[1] != 'p' || p[2] != 'u') break;
 
-        p += 3;
-        while (*p >= '0') p++;
-        while (*p == ' ') p++;
+        p += 4;
+        if (*p >= '0' && *p <= '9') p++;
+        p++;
 
         uint64_t active = 0;
         uint64_t total_idle = 0;
@@ -322,13 +374,15 @@ void cpu_show(CPU_mon* cpumon)
     static char buffer[OUT_BUFF_LEN] __attribute__((aligned(64)));
     char *p = buffer;
 
-    p = APPEND_LIT(p, "\033[3;1H");
-    p = APPEND_LIT(p, RESET);
+    p = APPEND_LIT(p, "\033[4;1H");
+    p = APPEND_LIT(p, PRESET);
 
     for(int i = 0; i < CORES_N; i++)
     {
         // Label
-        p = APPEND_LIT(p, "C");
+        p = APPEND_LIT(p, BOLD);
+        p = APPEND_LIT(p, " C");
+        p = APPEND_LIT(p, PRESET);
         p = append_int_fast(p, i);
 
         // Frequência
@@ -341,19 +395,19 @@ void cpu_show(CPU_mon* cpumon)
 
         // Temperatura
         int temp_val = cpumon->temp[i];
-        char* color_temp = (temp_val < 60) ? BTOP_BLUE : (temp_val < 80) ? BTOP_ORANGE : BTOP_RED;
-
+        // char* color_temp = (temp_val < 60) ? BTOP_BLUE : (temp_val < 80) ? BTOP_ORANGE : BTOP_RED;
         p = APPEND_LIT(p, "\033[18G");
-        p = append_str(p, color_temp);
+        p = append_str(p, ctemp[(temp_val + 128) >> 4]);
         p = append_int_fast(p, temp_val);
-        p = APPEND_LIT(p, RESET);
+        p = APPEND_LIT(p, PRESET);
         p = APPEND_LIT(p, "°C");
 
         // Usage
         int usage = cpumon->usage[i];
-        char* color_usage = (usage < 50) ? BTOP_GREEN : (usage < 85) ? BTOP_ORANGE : BTOP_RED;
+        // char* color_usage = (usage < 50) ? BTOP_GREEN : (usage < 85) ? BTOP_ORANGE : BTOP_RED;
+
         p = APPEND_LIT(p, "\033[25G ");
-        p = append_str(p, color_usage);
+        p = append_str(p, cperc[(usage >> 4) & 7]);
         if (usage < 10)
         {
             *p++ = ' ';
@@ -364,21 +418,22 @@ void cpu_show(CPU_mon* cpumon)
             *p++ = ' ';
         }
         p = append_int_fast(p, usage);
-        p = append_str(p, RESET);
+        p = append_str(p, PRESET);
         p = APPEND_LIT(p, "%\n");
     }
 
     // Load AVG
-    p = append_str(p, "\nLoad AVG:  ");
+    p = append_str(p, "\n Load AVG:  ");
     for(int k = 0; k < 3; k++) {
         unsigned long raw = cpumon->load_avg[k];
 
         int whole = raw >> 16;
         int frac  = ((raw * 100) >> 16) % 100;
 
-        char* l_color = (whole >= 2) ? BTOP_ORANGE : BTOP_WHITE;
-
-        p = append_str(p, l_color);
+        unsigned int l_idx = raw >> 17;
+        if (l_idx > 7) l_idx = 7;
+        
+        p = append_str(p, cperc[l_idx]);
         p = append_int_fast(p, whole);
         p = append_str(p, ".");
 
@@ -387,7 +442,7 @@ void cpu_show(CPU_mon* cpumon)
 
         if(k < 2) p = append_str(p, "   ");
     }
-    p = append_str(p, RESET);
+    p = append_str(p, PRESET);
 
     // Uptime
     long up = cpumon->uptime;
@@ -395,7 +450,7 @@ void cpu_show(CPU_mon* cpumon)
     int mins = (up % 3600) / 60;
     int secs = up % 60;
 
-    p = append_str(p, "\nUptime: ");
+    p = append_str(p, "\n Uptime: ");
     if (hours < 10) p = append_str(p, "0");
     p = append_int_fast(p, hours);
     p = append_str(p, ":");
@@ -429,7 +484,7 @@ int main()
     int delay = DELAY_mS*1000;
 
     setup_terminal();
-    printf("\033[H%s%s\t%dms\n", RESET, MODEL, DELAY_mS);
+    printf("\033[H\n %s%s\t%dms\n", PRESET, MODEL, DELAY_mS);
     while(run)
     {
         cpu_update(&cpumon, hwmon_cpu_id);
