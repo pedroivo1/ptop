@@ -23,7 +23,7 @@
 #define CORE_LABEL_NAME "coretemp"
 
 // --- SETTINGS ---
-#define DELAY_mS 400
+#define DELAY_MS 400
 
 // --- COLORS ---
 #define BG_BLACK    "\033[48;5;234m"
@@ -96,9 +96,6 @@ static const char* cperc[8] = {
 #define UI_TOP    1
 #define UI_LEFT   1
 
-#define GRAPH_WIDTH 12
-static const char* blocks[6] = {"_", "▂", "▃", "▅", "▆", "▇"};
-
 // ================================================================
 // ============================ GLOBAL ============================
 // ================================================================
@@ -121,8 +118,7 @@ typedef struct
     uint8_t usage[CORES_N];
     int8_t temp;
 
-} CPU_mon;
-
+} CpuMonitor;
 
 // ===============================================================
 // ============================ UTILS ============================
@@ -198,9 +194,9 @@ static inline char *append_str(char* buffer, const char* str)
 // =============================================================
 // ============================ CPU ============================
 // =============================================================
-void init_cpumon(CPU_mon* cpumon, int hwmon_cpu_id)
+void init_cpumon(CpuMonitor* cpumon, int hwmon_cpu_id)
 {
-    memset(cpumon, 0, sizeof(CPU_mon));
+    memset(cpumon, 0, sizeof(CpuMonitor));
     cpumon->fd_stat = open(STAT_PATH, O_RDONLY);
 
     char path[64];
@@ -213,7 +209,7 @@ void init_cpumon(CPU_mon* cpumon, int hwmon_cpu_id)
     *p = '\0';
     cpumon->fd_temp = open(path, O_RDONLY);
 
-    for(int i = 0; i < PHY_CORES_N; i++)
+    for (size_t i = 0; i < PHY_CORES_N; i++)
     {
         p = path;
         p = append_str(p, "/sys/devices/system/cpu/cpu");
@@ -224,12 +220,12 @@ void init_cpumon(CPU_mon* cpumon, int hwmon_cpu_id)
     }
 }
 
-void cleanup_cpumon(CPU_mon* cpumon)
+void cleanup_cpumon(CpuMonitor* cpumon)
 {
     close(cpumon->fd_stat);
     close(cpumon->fd_temp);
 
-    for(int i = 0; i < PHY_CORES_N; i++)
+    for (size_t i = 0; i < PHY_CORES_N; i++)
         close(cpumon->fd_freq[i]);
 }
 
@@ -239,7 +235,7 @@ int get_coretemp_id()
     char buffer[32];
     char *p;
 
-    for(int i = 0; i < HWMON_N; i++)
+    for (size_t i = 0; i < HWMON_N; i++)
     {
         p = path;
         p = append_str(p, "/sys/class/hwmon/hwmon");
@@ -263,21 +259,21 @@ int get_coretemp_id()
     return -1;
 }
 
-void get_core_temp_c(CPU_mon* cpumon)
+void get_core_temp_c(CpuMonitor* cpumon)
 {
     cpumon->temp = read_sysfs_int(cpumon->fd_temp) / 1000;
 }
 
-void get_core_freq_mhz(CPU_mon* cpumon)
+void get_core_freq_mhz(CpuMonitor* cpumon)
 {
     int total = 0;
-    for(int i = 0; i < PHY_CORES_N; i++)
+    for (size_t i = 0; i < PHY_CORES_N; i++)
         total += read_sysfs_int(cpumon->fd_freq[i]);
 
     cpumon->freq = total / (PHY_CORES_N * 1000);
 }
 
-void parse_cpu_stats(CPU_mon* cpumon)
+void parse_cpu_stats(CpuMonitor* cpumon)
 {
     static char buffer[STAT_BUFF_LEN]  __attribute__((aligned(64)));
     ssize_t bytes_read = pread(cpumon->fd_stat, buffer, sizeof(buffer) - 1, 0);
@@ -286,7 +282,7 @@ void parse_cpu_stats(CPU_mon* cpumon)
     char *p = buffer;
     while (*p && *p != '\n') p++;
     if (*p == '\n') p++;
-    for (int cpu_id = 0; cpu_id < CORES_N; cpu_id++)
+    for (size_t cpu_id = 0; cpu_id < CORES_N; cpu_id++)
     {
         if (p[0] != 'c' || p[1] != 'p' || p[2] != 'u') break;
 
@@ -299,7 +295,7 @@ void parse_cpu_stats(CPU_mon* cpumon)
         uint64_t val;
 
         // USER, NICE, SYSTEM
-        for(int k=0; k<3; k++) {
+        for (int k=0; k<3; k++) {
             val = 0;
             while (*p >= '0') {
                 val = (val * 10) + (*p++ - '0');
@@ -309,7 +305,7 @@ void parse_cpu_stats(CPU_mon* cpumon)
         }
 
         // IDLE, IOWAIT
-        for(int k=0; k<2; k++) {
+        for (int k=0; k<2; k++) {
             val = 0;
             while (*p >= '0') {
                 val = (val * 10) + (*p++ - '0');
@@ -319,7 +315,7 @@ void parse_cpu_stats(CPU_mon* cpumon)
         }
 
         // IRQ, SOFTIRQ, STEAL
-        for(int k=0; k<3; k++) {
+        for (int k=0; k<3; k++) {
             val = 0;
             while (*p >= '0') {
                 val = (val * 10) + (*p++ - '0');
@@ -344,7 +340,7 @@ void parse_cpu_stats(CPU_mon* cpumon)
     }
 }
 
-void get_system_load(CPU_mon* cpumon)
+void get_system_load(CpuMonitor* cpumon)
 {
     struct sysinfo si;
 
@@ -357,7 +353,7 @@ void get_system_load(CPU_mon* cpumon)
     }
 }
 
-void cpu_update(CPU_mon* cpumon, int hwmon_cpu_id)
+void update_metrics(CpuMonitor* cpumon, int hwmon_cpu_id)
 {
     get_core_freq_mhz(cpumon);
     get_core_temp_c(cpumon);
@@ -393,12 +389,12 @@ void setup_terminal() {
 
     p = append_str(p, BOX_TL);
     p = append_str(p, BOX_TR MODEL BOX_TL);
-    for(int i = 0; i < UI_WIDTH - MODEL_LEN - 5; i++) p = append_str(p, BOX_H);
+    for (int i = 0; i < UI_WIDTH - MODEL_LEN - 5; i++) p = append_str(p, BOX_H);
     p = append_str(p, BOX_H);
     p = append_str(p, BOX_TR);
 
     // --- LEFT SIDE ---
-    for(int i = 1; i < UI_HEIGHT - 1; i++) {
+    for (int i = 1; i < UI_HEIGHT - 1; i++) {
         p = append_str(p, "\033[");
         p = append_int_fast(p, UI_TOP + i);
         p = append_str(p, ";");
@@ -408,7 +404,7 @@ void setup_terminal() {
     }
 
     // --- RIGHT SIDE ---
-    for(int i = 1; i < UI_HEIGHT - 1; i++) {
+    for (int i = 1; i < UI_HEIGHT - 1; i++) {
         p = append_str(p, "\033[");
         p = append_int_fast(p, UI_TOP + i);
         p = append_str(p, ";");
@@ -425,9 +421,9 @@ void setup_terminal() {
     p = append_str(p, "H");
     p = append_str(p, BOX_BL);
     p = append_str(p, BOX_BR);
-    for(int i = 0; i < 21; i++) p = append_str(p, BOX_H);
+    for (int i = 0; i < 21; i++) p = append_str(p, BOX_H);
     p = append_str(p, BOX_BL);
-    for(int i = 0; i < UI_WIDTH - 25; i++) p = append_str(p, BOX_H);
+    for (int i = 0; i < UI_WIDTH - 25; i++) p = append_str(p, BOX_H);
     p = append_str(p, BOX_BR);
 
     if (write(STDOUT_FILENO, buffer, p - buffer) == -1)
@@ -440,7 +436,7 @@ void restore_terminal() {
     tcsetattr(STDIN_FILENO, TCSANOW, &original_term);
 }
 
-void cpu_show(CPU_mon* cpumon)
+void render_interface(CpuMonitor* cpumon)
 {
     static char buffer[OUT_BUFF_LEN] __attribute__((aligned(64)));
     char *p = buffer;
@@ -479,13 +475,13 @@ void cpu_show(CPU_mon* cpumon)
     p = append_int_fast(p, (mhz % 1000) / 100);
     p = APPEND_LIT(p, " GHz");
 
-    for(int i = 0; i < CORES_N; i++)
+    for (int i = 0; i < CORES_N; i++)
     {
-        int linha_atual = UI_TOP + i + 3;
+        int current_row = UI_TOP + i + 3;
 
         // --- LABEL ---
         p = append_str(p, "\033[");
-        p = append_int_fast(p, linha_atual);
+        p = append_int_fast(p, current_row);
         p = append_str(p, ";");
         p = append_int_fast(p, UI_LEFT + 2);
         p = append_str(p, "H");
@@ -496,7 +492,7 @@ void cpu_show(CPU_mon* cpumon)
 
         // --- USAGE ---
         p = append_str(p, "\033[");
-        p = append_int_fast(p, linha_atual);
+        p = append_int_fast(p, current_row);
         p = append_str(p, ";");
         p = append_int_fast(p, UI_LEFT + UI_WIDTH - 5);
         p = append_str(p, "H");
@@ -511,14 +507,14 @@ void cpu_show(CPU_mon* cpumon)
     }
 
     // --- LOAD AVG ---
-    int linha_load = UI_TOP + UI_HEIGHT - 1;
+    int load_row = UI_TOP + UI_HEIGHT - 1;
     p = append_str(p, "\033[");
-    p = append_int_fast(p, linha_load);
+    p = append_int_fast(p, load_row);
     p = append_str(p, ";");
     p = append_int_fast(p, UI_LEFT + 2);
     p = append_str(p, "H");
     p = append_str(p, "AVG: ");
-    for(int k = 0; k < 3; k++) {
+    for (int k = 0; k < 3; k++) {
         unsigned long raw = cpumon->load_avg[k];
 
         int whole = raw >> 16;
@@ -534,14 +530,14 @@ void cpu_show(CPU_mon* cpumon)
         if (frac < 10) *p++ = '0';
         p = append_int_fast(p, frac);
 
-        if(k < 2) p = append_str(p, "  ");
+        if (k < 2) p = append_str(p, "  ");
     }
     p = append_str(p, PRESET);
 
     // --- UPTIME ---
-    int linha_up = UI_TOP + UI_HEIGHT + 1;
+    int uptime_row = UI_TOP + UI_HEIGHT + 1;
     p = append_str(p, "\033[");
-    p = append_int_fast(p, linha_up);
+    p = append_int_fast(p, uptime_row);
     p = append_str(p, ";");
     p = append_int_fast(p, UI_LEFT);
     p = append_str(p, "H");
@@ -552,7 +548,7 @@ void cpu_show(CPU_mon* cpumon)
     int secs = up % 60;
 
     p = append_str(p, "Up: ");
-    if (hours < 10) p = append_str(p, "0");
+    if  (hours < 10) p = append_str(p, "0");
     p = append_int_fast(p, hours);
     p = append_str(p, ":");
     if (mins < 10) p = append_str(p, "0");
@@ -569,26 +565,26 @@ void cpu_show(CPU_mon* cpumon)
 // ==============================================================
 // ============================ MAIN ============================
 // ==============================================================
-void cpumon_exit(int sig)
+void handle_sigint(int sig)
 {
     run = 0;
 }
 
 int main()
 {
-    signal(SIGINT, cpumon_exit);
+    signal(SIGINT, handle_sigint);
 
     int hwmon_cpu_id = get_coretemp_id();
 
-    CPU_mon cpumon;
+    CpuMonitor cpumon;
     init_cpumon(&cpumon, hwmon_cpu_id);
-    int delay = DELAY_mS*1000;
+    int delay = DELAY_MS*1000;
 
     setup_terminal();
-    while(run)
+    while (run)
     {
-        cpu_update(&cpumon, hwmon_cpu_id);
-        cpu_show(&cpumon);
+        update_metrics(&cpumon, hwmon_cpu_id);
+        render_interface(&cpumon);
         usleep(delay);
     }
 
