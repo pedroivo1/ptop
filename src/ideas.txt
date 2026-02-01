@@ -6,6 +6,3 @@ SYS
 - Fan Speed (RPM)
 - Context Switches
 - Scaling Governor
-
-┌───
-│

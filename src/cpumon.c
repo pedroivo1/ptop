@@ -19,11 +19,11 @@
 // --- PATHS & BUFFERS ---
 #define STAT_PATH "/proc/stat"
 #define STAT_BUFF_LEN 2048
-#define OUT_BUFF_LEN 3072
+#define OUT_BUFF_LEN 5120
 #define CORE_LABEL_NAME "coretemp"
 
 // --- SETTINGS ---
-#define DELAY_MS 400
+#define DELAY_MS 500
 
 // --- COLORS ---
 #define BG_BLACK    "\033[48;5;234m"
@@ -92,9 +92,13 @@ static const char* cperc[8] = {
 
 // --- BOX SIZES ---
 #define UI_WIDTH  32
-#define UI_HEIGHT 17
+#define UI_HEIGHT 15
 #define UI_TOP    1
 #define UI_LEFT   1
+
+#define GRAPH_WIDTH 21
+static const char* blocks[6] = {".", ".", ".", ":", ":", ":"};
+
 
 // ================================================================
 // ============================ GLOBAL ============================
@@ -111,13 +115,15 @@ typedef struct
 
     int fd_stat;
     int fd_temp;
-    int fd_freq[PHY_CORES_N];
     uint32_t load_avg[3];
+    int fd_freq[PHY_CORES_N];
+    int graph_head;
 
     uint16_t freq;
     uint8_t usage[CORES_N];
     int8_t temp;
 
+    uint8_t graph_hist[CORES_N][GRAPH_WIDTH];
 } CpuMonitor;
 
 // ===============================================================
@@ -331,13 +337,19 @@ void parse_cpu_stats(CpuMonitor* cpumon)
         uint64_t diff_total = total - cpumon->prev_total[cpu_id];
         uint64_t diff_idle  = total_idle - cpumon->prev_idle[cpu_id];
 
+        uint8_t current_usage = 0;
         if (diff_total > 0) {
-            cpumon->usage[cpu_id] = (uint8_t)((diff_total - diff_idle) * 100 / diff_total);
+            current_usage = (uint8_t)((diff_total - diff_idle) * 100 / diff_total);
         }
+
+        cpumon->usage[cpu_id] = current_usage;
 
         cpumon->prev_total[cpu_id] = total;
         cpumon->prev_idle[cpu_id] = total_idle;
+
+        cpumon->graph_hist[cpu_id][cpumon->graph_head] = current_usage;
     }
+    cpumon->graph_head = (cpumon->graph_head + 1) % GRAPH_WIDTH;
 }
 
 void get_system_load(CpuMonitor* cpumon)
@@ -381,16 +393,20 @@ void setup_terminal() {
 
     p = append_str(p, "\033[38;5;245m");
 
+    // --- TOP LINE ---
     p = append_str(p, "\033[");
     p = append_int_fast(p, UI_TOP);
     p = append_str(p, ";");
     p = append_int_fast(p, UI_LEFT);
     p = append_str(p, "H");
 
+    // --- MODEL ---
     p = append_str(p, BOX_TL);
     p = append_str(p, BOX_TR MODEL BOX_TL);
-    for (int i = 0; i < UI_WIDTH - MODEL_LEN - 5; i++) p = append_str(p, BOX_H);
-    p = append_str(p, BOX_H);
+    for (int i = 0; i < UI_WIDTH - MODEL_LEN - 18; i++) p = append_str(p, BOX_H);
+    p = append_str(p, BOX_TR);
+    for (int i = 0; i < 12; i++) p = append_str(p, " ");
+    p = append_str(p, BOX_TL);
     p = append_str(p, BOX_TR);
 
     // --- LEFT SIDE ---
@@ -419,11 +435,18 @@ void setup_terminal() {
     p = append_str(p, ";");
     p = append_int_fast(p, UI_LEFT);
     p = append_str(p, "H");
+
     p = append_str(p, BOX_BL);
     p = append_str(p, BOX_BR);
-    for (int i = 0; i < 21; i++) p = append_str(p, BOX_H);
+    for (int i = 0; i < 21; i++) p = append_str(p, " ");
     p = append_str(p, BOX_BL);
-    for (int i = 0; i < UI_WIDTH - 25; i++) p = append_str(p, BOX_H);
+    for (int i = 0; i < UI_WIDTH - 32; i++) p = append_str(p, BOX_H);
+
+    // --- DELAY ---
+    p = append_str(p, BOX_BR);
+    p = append_int_fast(p, DELAY_MS);
+    p = append_str(p, "ms");
+    p = append_str(p, BOX_BL);
     p = append_str(p, BOX_BR);
 
     if (write(STDOUT_FILENO, buffer, p - buffer) == -1)
@@ -440,20 +463,21 @@ void render_interface(CpuMonitor* cpumon)
 {
     static char buffer[OUT_BUFF_LEN] __attribute__((aligned(64)));
     char *p = buffer;
+    int row_n = 1;
 
     // --- MAIN LABEL ---
     p = APPEND_LIT(p, PRESET);
     p = append_str(p, "\033[");
-    p = append_int_fast(p, UI_TOP + 1);
+    p = append_int_fast(p, UI_TOP + row_n);
     p = append_str(p, ";");
-    p = append_int_fast(p, UI_LEFT + 2);
+    p = append_int_fast(p, UI_LEFT + 1);
     p = append_str(p, "H");
     p = append_str(p, "CPU   ");
 
     // --- TEMPERATURE ---
     p = APPEND_LIT(p, PRESET);
     p = append_str(p, "\033[");
-    p = append_int_fast(p, UI_TOP + 1);
+    p = append_int_fast(p, UI_TOP + row_n);
     p = append_str(p, ";");
     p = append_int_fast(p, UI_LEFT + 8);
     p = append_str(p, "H");
@@ -465,7 +489,7 @@ void render_interface(CpuMonitor* cpumon)
 
     // --- FREQUENCY ---
     p = append_str(p, "\033[");
-    p = append_int_fast(p, UI_TOP + 1);
+    p = append_int_fast(p, UI_TOP + row_n);
     p = append_str(p, ";");
     p = append_int_fast(p, UI_LEFT + 15);
     p = append_str(p, "H");
@@ -477,18 +501,45 @@ void render_interface(CpuMonitor* cpumon)
 
     for (int i = 0; i < CORES_N; i++)
     {
-        int current_row = UI_TOP + i + 3;
+        int current_row = UI_TOP + i + 2;
 
         // --- LABEL ---
         p = append_str(p, "\033[");
         p = append_int_fast(p, current_row);
         p = append_str(p, ";");
-        p = append_int_fast(p, UI_LEFT + 2);
+        p = append_int_fast(p, UI_LEFT + 1);
         p = append_str(p, "H");
         p = APPEND_LIT(p, BOLD);
         p = APPEND_LIT(p, "C");
         p = append_int_fast(p, i);
         p = APPEND_LIT(p, PRESET);
+        
+        // --- GRAPH (SCROLLING) ---
+        p = append_str(p, "\033[");
+        p = append_int_fast(p, current_row);
+        p = append_str(p, ";");
+        p = append_int_fast(p, UI_LEFT + 5);
+        p = append_str(p, "H");
+
+        for(int k = 0; k < GRAPH_WIDTH; k++)
+        {
+            // Calculate circular index starting from oldest data (head)
+            int idx = (cpumon->graph_head + k) % GRAPH_WIDTH;
+            int val = cpumon->graph_hist[i][idx];
+
+            // Color based on value
+            p = append_str(p, cperc[(val >> 4) & 7]);
+
+            // Block selection (0-100 mapped to 0-5)
+            int block_idx = 0;
+            if (val > 0)  block_idx = 1; 
+            if (val > 20) block_idx = 2;
+            if (val > 40) block_idx = 3;
+            if (val > 60) block_idx = 4;
+            if (val > 80) block_idx = 5;
+            
+            p = append_str(p, blocks[block_idx]);
+        }
 
         // --- USAGE ---
         p = append_str(p, "\033[");
@@ -535,11 +586,11 @@ void render_interface(CpuMonitor* cpumon)
     p = append_str(p, PRESET);
 
     // --- UPTIME ---
-    int uptime_row = UI_TOP + UI_HEIGHT + 1;
+    int uptime_row = UI_TOP;
     p = append_str(p, "\033[");
     p = append_int_fast(p, uptime_row);
     p = append_str(p, ";");
-    p = append_int_fast(p, UI_LEFT);
+    p = append_int_fast(p, UI_LEFT + UI_WIDTH - 14);
     p = append_str(p, "H");
     
     long up = cpumon->uptime;
