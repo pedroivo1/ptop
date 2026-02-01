@@ -1,8 +1,0 @@
-CPU
-- Thermal Throttling Count
-
-SYS
-- Package Power Consumption (Watts)
-- Fan Speed (RPM)
-- Context Switches
-- Scaling Governor
