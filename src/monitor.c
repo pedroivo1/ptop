@@ -100,7 +100,8 @@ static void get_core_freq_mhz(CpuMonitor *cpumon)
     cpumon->freq = total / (1000 * PHY_CORES_N);
 }
 
-static void parse_cpu_stats(CpuMonitor* cpumon) {
+static void parse_cpu_stats(CpuMonitor* cpumon)
+{
     static char buf[STAT_BUFF_LEN] __attribute__((aligned(64)));
     ssize_t bytes_read = pread(cpumon->fd_stat, buf, sizeof(buf) - 1, 0);
     if (bytes_read < 0) return;
@@ -119,7 +120,8 @@ static void parse_cpu_stats(CpuMonitor* cpumon) {
         uint64_t total_idle = 0;
         uint64_t val;
         // USER, NICE, SYSTEM
-        for (int k=0; k<3; k++) {
+        for (int k=0; k<3; k++)
+        {
             val = 0;
             while (*p >= '0') val = (val * 10) + (*p++ - '0');
             active += val;
@@ -127,7 +129,8 @@ static void parse_cpu_stats(CpuMonitor* cpumon) {
         }
 
         // IDLE, IOWAIT
-        for (int k=0; k<2; k++) {
+        for (int k=0; k<2; k++) 
+        {
             val = 0;
             while (*p >= '0') val = (val * 10) + (*p++ - '0');
             total_idle += val;
@@ -135,7 +138,8 @@ static void parse_cpu_stats(CpuMonitor* cpumon) {
         }
 
         // IRQ, SOFTIRQ, STEAL
-        for (int k=0; k<3; k++) {
+        for (int k=0; k<3; k++)
+        {
             val = 0;
             while (*p >= '0') val = (val * 10) + (*p++ - '0');
             active += val;
@@ -150,7 +154,8 @@ static void parse_cpu_stats(CpuMonitor* cpumon) {
         uint64_t diff_idle  = total_idle - cpumon->prev_idle[cpu_id];
 
         uint8_t current_usage = 0;
-        if (diff_total > 0) {
+        if (diff_total > 0)
+        {
             current_usage = (uint8_t)((diff_total - diff_idle) * 100 / diff_total);
         }
 

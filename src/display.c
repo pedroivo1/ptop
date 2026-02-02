@@ -35,7 +35,8 @@
 #define TEMP_14  "\033[38;5;196m"
 #define TEMP_15  "\033[38;5;129m"
 
-static const char* ctemp[16] = {
+static const char* ctemp[16] =
+{
     TEMP_0, TEMP_1, TEMP_2, TEMP_3, TEMP_4, TEMP_5, TEMP_6, TEMP_7,
     TEMP_8, TEMP_9, TEMP_10, TEMP_11, TEMP_12, TEMP_13, TEMP_14, TEMP_15
 };
@@ -50,7 +51,8 @@ static const char* ctemp[16] = {
 #define PERC_6   "\033[38;5;196m"
 #define PERC_7   "\033[38;5;129m"
 
-static const char* cperc[8] = {
+static const char* cperc[8] =
+{
     PERC_0, PERC_1, PERC_2, PERC_3, PERC_4, PERC_5, PERC_6, PERC_7
 };
 
@@ -71,19 +73,8 @@ static const char* blocks[6] = {" ", ".", ".", ":", ":", ":"};
 
 static struct termios original_term;
 
-void setup_terminal() {
-    struct termios new_term;
-    tcgetattr(STDIN_FILENO, &original_term);
-    new_term = original_term;
-    new_term.c_lflag &= ~(ECHO | ICANON);
-    tcsetattr(STDIN_FILENO, TCSANOW, &new_term);
-
-    printf("\033[?1049h\033[?25l%s\033[2J", BG_BLACK);
-    printf("\033[H%s", PRESET);
-    fflush(stdout);
-
-    char buf[1024];
-    char *p = buf;
+static inline char *draw_box(char *p)
+{
     p = append_str(p, "\033[38;5;240m");
     p = append_str(p, "\033[");
     p = append_int(p, UI_TOP);
@@ -96,15 +87,16 @@ void setup_terminal() {
     p = append_str(p, MODEL);
     p = append_str(p, NOBOLD);
     p = append_str(p, "\033[38;5;240m");
-    p = append_str(p, BOX_TL  BOX_TR);
+    p = append_str(p, BOX_TL BOX_H BOX_TR);
     p = append_str(p, "    ");
-    p = append_str(p, BOX_TL  BOX_TR);
+    p = append_str(p, BOX_TL BOX_H BOX_TR);
     p = append_str(p, "       ");
     p = append_str(p,  BOX_TL);
-    for (int i = 0; i < UI_WIDTH - MODEL_LEN - 19; i++) p = append_str(p, BOX_H);
+    for (int i = 0; i < UI_WIDTH - MODEL_LEN - 21; i++) p = append_str(p, BOX_H);
     p = append_str(p,  BOX_TR);
 
-    for (int i = 1; i < UI_HEIGHT - 1; i++) {
+    for (int i = 1; i < UI_HEIGHT - 1; i++)
+    {
         p = append_str(p, "\033[");
         p = append_int(p, UI_TOP + i);
         p = append_str(p, ";");
@@ -112,7 +104,8 @@ void setup_terminal() {
         p = append_str(p, "H");
         p = append_str(p, BOX_V);
     }
-    for (int i = 1; i < UI_HEIGHT - 1; i++) {
+    for (int i = 1; i < UI_HEIGHT - 1; i++)
+    {
         p = append_str(p, "\033[");
         p = append_int(p, UI_TOP + i);
         p = append_str(p, ";");
@@ -140,27 +133,18 @@ void setup_terminal() {
     p = append_str(p, BOX_BL);
     p = append_str(p, BOX_BR);
 
-    if (write(STDOUT_FILENO, buf, p - buf) == -1) {}
+    return p;
 }
 
-void restore_terminal() {
-    printf("\033[0m\033[?1049l\033[?25h");
-    fflush(stdout);
-    tcsetattr(STDIN_FILENO, TCSANOW, &original_term);
-}
-
-void render_interface(CpuMonitor* cpumon) {
-    static char buf[OUT_BUFF_LEN] __attribute__((aligned(64)));
-    char *p = buf;
-    int main_cpu_row = UI_TOP;
-
+static inline char *draw_temperature(char *p, int temp, int row)
+{
     p = APPEND_LIT(p, PRESET);
     p = append_str(p, "\033[");
-    p = append_int(p, main_cpu_row);
+    p = append_int(p, row);
     p = append_str(p, ";");
-    p = append_int(p, UI_LEFT + 13);
+    p = append_int(p, UI_LEFT + 14);
     p = append_str(p, "H");
-    int temp_val = cpumon->temp;
+    int temp_val = temp;
     p = append_str(p, BOLD);
     p = append_str(p, ctemp[(temp_val + 128) >> 4]);
     p = append_int(p, temp_val);
@@ -168,12 +152,17 @@ void render_interface(CpuMonitor* cpumon) {
     p = APPEND_LIT(p, "°C");
     p = append_str(p, NOBOLD);
 
+    return p;
+}
+
+static inline char *draw_frequency(char *p, int freq, int row)
+{
     p = append_str(p, "\033[");
-    p = append_int(p, main_cpu_row);
+    p = append_int(p, row);
     p = append_str(p, ";");
-    p = append_int(p, UI_LEFT + 19);
+    p = append_int(p, UI_LEFT + 21);
     p = append_str(p, "H");
-    int mhz = cpumon->freq;
+    int mhz = freq;
     p = append_str(p, BOLD);
     p = append_int(p, mhz / 1000);
     p = APPEND_LIT(p, ".");
@@ -181,10 +170,78 @@ void render_interface(CpuMonitor* cpumon) {
     p = APPEND_LIT(p, " GHz");
     p = append_str(p, NOBOLD);
 
-    for (int i = 0; i < CORES_N; i++) {
-        int current_row = UI_TOP + i + 1;
+    return p;
+}
+
+static inline char *draw_uptime(char *p, int uptime, int row)
+{
+    p = append_str(p, "\033[");
+    p = append_int(p, row);
+    p = append_str(p, ";");
+    p = append_int(p, UI_LEFT + 2);
+    p = append_str(p, "H");
+    long up = uptime;
+    int hours = up / 3600;
+    int mins = (up % 3600) / 60;
+    int secs = up % 60;
+    p = append_str(p, "Up: ");
+    if  (hours < 10) p = append_str(p, "0");
+    p = append_int(p, hours);
+    p = append_str(p, ":");
+    if (mins < 10) p = append_str(p, "0");
+    p = append_int(p, mins);
+    p = append_str(p, ":");
+    if (secs < 10) p = append_str(p, "0");
+    p = append_int(p, secs);
+
+
+    return p;
+}
+
+void setup_terminal()
+{
+    struct termios new_term;
+    tcgetattr(STDIN_FILENO, &original_term);
+    new_term = original_term;
+    new_term.c_lflag &= ~(ECHO | ICANON);
+    tcsetattr(STDIN_FILENO, TCSANOW, &new_term);
+
+    char buf[1024];
+    char *p = buf;
+    p = append_str(p, "\033[?1049h\033[?25l");
+    p = append_str(p, BG_BLACK);
+    p = append_str(p, "\033[2J");
+    p = append_str(p, "\033[H");
+    p = append_str(p, PRESET);
+
+    p = draw_box(p);
+
+    if (write(STDOUT_FILENO, buf, p - buf) == -1)
+        perror("write failed");
+}
+
+void restore_terminal()
+{
+    printf("\033[0m\033[?1049l\033[?25h");
+    fflush(stdout);
+    tcsetattr(STDIN_FILENO, TCSANOW, &original_term);
+}
+
+void render_interface(CpuMonitor* cpumon)
+{
+    static char buf[OUT_BUFF_LEN] __attribute__((aligned(64)));
+    char *p = buf;
+
+    int row = UI_TOP;
+    p = draw_temperature(p, cpumon->temp, row);
+    row = UI_TOP;
+    p = draw_frequency(p, cpumon->freq, row);
+
+    for (int i = 0; i < CORES_N; i++)
+    {
+        row = UI_TOP + i + 1;
         p = append_str(p, "\033[");
-        p = append_int(p, current_row);
+        p = append_int(p, row);
         p = append_str(p, ";");
         p = append_int(p, UI_LEFT + 1);
         p = append_str(p, "H");
@@ -194,12 +251,13 @@ void render_interface(CpuMonitor* cpumon) {
         p = APPEND_LIT(p, PRESET);
         
         p = append_str(p, "\033[");
-        p = append_int(p, current_row);
+        p = append_int(p, row);
         p = append_str(p, ";");
         p = append_int(p, UI_LEFT + 5);
         p = append_str(p, "H");
 
-        for(int k = 0; k < GRAPH_WIDTH; k++) {
+        for(int k = 0; k < GRAPH_WIDTH; k++)
+        {
             int idx = (cpumon->graph_head + k) % GRAPH_WIDTH;
             int val = cpumon->graph_hist[i][idx];
             p = append_str(p, cperc[(val >> 4) & 7]);
@@ -213,7 +271,7 @@ void render_interface(CpuMonitor* cpumon) {
         }
 
         p = append_str(p, "\033[");
-        p = append_int(p, current_row);
+        p = append_int(p, row);
         p = append_str(p, ";");
         p = append_int(p, UI_LEFT + UI_WIDTH - 5);
         p = append_str(p, "H");
@@ -233,7 +291,8 @@ void render_interface(CpuMonitor* cpumon) {
     p = append_int(p, UI_LEFT + 2);
     p = append_str(p, "H");
     p = append_str(p, "AVG: ");
-    for (int k = 0; k < 3; k++) {
+    for (int k = 0; k < 3; k++)
+    {
         unsigned long raw = cpumon->load_avg[k];
         int whole = raw >> 16;
         int frac  = ((raw * 100) >> 16) % 100;
@@ -249,25 +308,9 @@ void render_interface(CpuMonitor* cpumon) {
     }
     p = append_str(p, PRESET);
 
-    int uptime_row = UI_TOP + UI_HEIGHT;
-    p = append_str(p, "\033[");
-    p = append_int(p, uptime_row);
-    p = append_str(p, ";");
-    p = append_int(p, UI_LEFT + 2);
-    p = append_str(p, "H");
-    long up = cpumon->uptime;
-    int hours = up / 3600;
-    int mins = (up % 3600) / 60;
-    int secs = up % 60;
-    p = append_str(p, "Up: ");
-    if  (hours < 10) p = append_str(p, "0");
-    p = append_int(p, hours);
-    p = append_str(p, ":");
-    if (mins < 10) p = append_str(p, "0");
-    p = append_int(p, mins);
-    p = append_str(p, ":");
-    if (secs < 10) p = append_str(p, "0");
-    p = append_int(p, secs);
+    row = UI_TOP + UI_HEIGHT;
+    p = draw_uptime(p, cpumon->uptime, row);
 
-    if (write(STDOUT_FILENO, buf, p - buf) == -1) {}
+    if (write(STDOUT_FILENO, buf, p - buf) == -1)
+        perror("write failed");
 }

@@ -6,11 +6,13 @@
 
 volatile sig_atomic_t run = 1;
 
-void handle_sigint(int sig) {
+void handle_sigint(int sig)
+{
     run = 0;
 }
 
-int main() {
+int main()
+{
     signal(SIGINT, handle_sigint);
 
     CpuMonitor cpumon;
@@ -20,7 +22,8 @@ int main() {
 
     setup_terminal();
     int i = 0;
-    while (run) {
+    while (run)
+    {
         i++;
         if (i > 10) run = 0;
         update_metrics(&cpumon);
