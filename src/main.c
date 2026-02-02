@@ -21,11 +21,8 @@ int main()
     int delay = DELAY_MS * 1000;
 
     setup_terminal();
-    int i = 0;
     while (run)
     {
-        i++;
-        if (i > 10) run = 0;
         update_metrics(&cpumon);
         render_interface(&cpumon);
         usleep(delay);
