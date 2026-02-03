@@ -19,7 +19,7 @@ void print_header(const char* title) {
 }
 
 int main() {
-    // --- Temperature ---
+    // --- TEMPERATURE ---
     print_header("TEMP (Start: -128 | Step: 16)");
     
     printf("Fluxo: ");
@@ -36,7 +36,7 @@ int main() {
                i, ctemp[i], i, temp_val, ctemp[i], temp_val+15);
     }
 
-    // --- Percentage ---
+    // --- PERCENTAGE ---
     print_header("USAGE (Start: 0 | Step: 16)");
     
     printf("Fluxo: ");

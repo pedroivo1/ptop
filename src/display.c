@@ -5,6 +5,58 @@
 #include <unistd.h>
 #include <termios.h>
 
+// --- COLORS ---
+#define BG_BLACK    "\033[48;5;234m"
+#define GRAY        "\033[38;5;245m"
+#define WHITE       "\033[38;5;253m"
+#define PRESET      "\033[0m" BG_BLACK WHITE
+#define BOLD        "\033[1m"
+#define NOBOLD      "\033[22m"
+
+// --- TEMPERATURE ---
+#define TEMP_0   "\033[38;5;21m"
+#define TEMP_1   "\033[38;5;21m"
+#define TEMP_2   "\033[38;5;27m"
+#define TEMP_3   "\033[38;5;27m"
+#define TEMP_4   "\033[38;5;33m"
+#define TEMP_5   "\033[38;5;39m"
+#define TEMP_6   "\033[38;5;45m"
+#define TEMP_7   "\033[38;5;51m"
+#define TEMP_8   "\033[38;5;87m"
+#define TEMP_9   "\033[38;5;49m"
+#define TEMP_10  "\033[38;5;46m"
+#define TEMP_11  "\033[38;5;118m"
+#define TEMP_12  "\033[38;5;226m"
+#define TEMP_13  "\033[38;5;202m"
+#define TEMP_14  "\033[38;5;196m"
+#define TEMP_15  "\033[38;5;129m"
+
+// --- PERCENTAGE ---
+#define PERC_0   "\033[38;5;47m"
+#define PERC_1   "\033[38;5;82m"
+#define PERC_2   "\033[38;5;154m"
+#define PERC_3   "\033[38;5;190m"
+#define PERC_4   "\033[38;5;226m"
+#define PERC_5   "\033[38;5;208m"
+#define PERC_6   "\033[38;5;196m"
+#define PERC_7   "\033[38;5;129m"
+
+// --- BOX ---
+#define BOX_TL "┌"
+#define BOX_TR "┐"
+#define BOX_BL "└"
+#define BOX_BR "┘"
+#define BOX_H  "─" 
+#define BOX_V  "│"
+
+// --- BOX SIZES ---
+#define UI_WIDTH  32
+#define UI_HEIGHT CORES_N + 2
+#define UI_TOP    1
+#define UI_LEFT   1
+
+static struct termios original_term;
+
 static const char* ctemp[16] =
 {
     TEMP_0, TEMP_1, TEMP_2, TEMP_3, TEMP_4, TEMP_5, TEMP_6, TEMP_7,
@@ -26,8 +78,6 @@ static const char* dots[8] = {
     "\xE2\xA3\xBF", // ⣿
     "\xE2\xA3\xBF"  // ⣿
 };
-
-static struct termios original_term;
 
 static inline char *draw_box(char *p)
 {
@@ -175,13 +225,6 @@ void setup_terminal()
         perror("write failed");
 }
 
-void restore_terminal()
-{
-    printf("\033[0m\033[?1049l\033[?25h");
-    fflush(stdout);
-    tcsetattr(STDIN_FILENO, TCSANOW, &original_term);
-}
-
 void render_interface(CpuMonitor* cpumon)
 {
     static char buf[OUT_BUFF_LEN] __attribute__((aligned(64)));
@@ -268,4 +311,11 @@ void render_interface(CpuMonitor* cpumon)
 
     if (write(STDOUT_FILENO, buf, p - buf) == -1)
         perror("write failed");
+}
+
+void restore_terminal()
+{
+    printf("\033[0m\033[?1049l\033[?25h");
+    fflush(stdout);
+    tcsetattr(STDIN_FILENO, TCSANOW, &original_term);
 }
