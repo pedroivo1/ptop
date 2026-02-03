@@ -5,71 +5,27 @@
 #include <unistd.h>
 #include <termios.h>
 
-// --- COLORS ---
-#define BG_BLACK    "\033[48;5;234m"
-#define BTOP_BLUE   "\033[38;5;75m"
-#define BTOP_DIM    "\033[38;5;242m"
-#define BTOP_GREEN  "\033[38;5;113m"
-#define BTOP_ORANGE "\033[38;5;215m"
-#define BTOP_RED    "\033[38;5;196m"
-#define BTOP_WHITE  "\033[38;5;253m"
-#define PRESET      "\033[0m" BG_BLACK BTOP_WHITE
-#define BOLD        "\033[1m"
-#define NOBOLD      "\033[22m"
-
-// --- TEMPERATURE ---
-#define TEMP_0   "\033[38;5;21m"
-#define TEMP_1   "\033[38;5;27m"
-#define TEMP_2   "\033[38;5;33m"
-#define TEMP_3   "\033[38;5;39m"
-#define TEMP_4   "\033[38;5;45m"
-#define TEMP_5   "\033[38;5;51m"
-#define TEMP_6   "\033[38;5;50m"
-#define TEMP_7   "\033[38;5;49m"
-#define TEMP_8   "\033[38;5;47m"
-#define TEMP_9   "\033[38;5;82m"
-#define TEMP_10  "\033[38;5;154m"
-#define TEMP_11  "\033[38;5;226m"
-#define TEMP_12  "\033[38;5;214m"
-#define TEMP_13  "\033[38;5;202m"
-#define TEMP_14  "\033[38;5;196m"
-#define TEMP_15  "\033[38;5;129m"
-
 static const char* ctemp[16] =
 {
     TEMP_0, TEMP_1, TEMP_2, TEMP_3, TEMP_4, TEMP_5, TEMP_6, TEMP_7,
     TEMP_8, TEMP_9, TEMP_10, TEMP_11, TEMP_12, TEMP_13, TEMP_14, TEMP_15
 };
 
-// --- PERCENTAGE ---
-#define PERC_0   "\033[38;5;48m"
-#define PERC_1   "\033[38;5;46m"
-#define PERC_2   "\033[38;5;118m"
-#define PERC_3   "\033[38;5;226m"
-#define PERC_4   "\033[38;5;214m"
-#define PERC_5   "\033[38;5;196m"
-#define PERC_6   "\033[38;5;196m"
-#define PERC_7   "\033[38;5;129m"
-
 static const char* cperc[8] =
 {
     PERC_0, PERC_1, PERC_2, PERC_3, PERC_4, PERC_5, PERC_6, PERC_7
 };
 
-// --- BOX ---
-#define BOX_TL "┌"
-#define BOX_TR "┐"
-#define BOX_BL "└"
-#define BOX_BR "┘"
-#define BOX_H  "─" 
-#define BOX_V  "│"
-
-#define UI_WIDTH  32
-#define UI_HEIGHT 14
-#define UI_TOP    1
-#define UI_LEFT   1
-
-static const char* blocks[6] = {" ", ".", ".", ":", ":", ":"};
+static const char* dots[8] = {
+    "\xE2\xA3\x80", // ⣀
+    "\xE2\xA3\xA0", // ⣠
+    "\xE2\xA3\xA4", // ⣤
+    "\xE2\xA3\xA6", // ⣦
+    "\xE2\xA3\xB6", // ⣶
+    "\xE2\xA3\xB7", // ⣷
+    "\xE2\xA3\xBF", // ⣿
+    "\xE2\xA3\xBF"  // ⣿
+};
 
 static struct termios original_term;
 
@@ -83,7 +39,7 @@ static inline char *draw_box(char *p)
     p = append_str(p, "H");
 
     p = append_str(p, BOX_TL BOX_TR);
-    p = append_str(p, BTOP_WHITE);
+    p = append_str(p, WHITE);
     p = append_str(p, MODEL);
     p = append_str(p, NOBOLD);
     p = append_str(p, "\033[38;5;240m");
@@ -126,7 +82,7 @@ static inline char *draw_box(char *p)
     for (int i = 0; i < UI_WIDTH - 32; i++) p = append_str(p, BOX_H);
 
     p = append_str(p, BOX_BR);
-    p = append_str(p, BTOP_WHITE);
+    p = append_str(p, WHITE);
     p = append_int(p, DELAY_MS);
     p = append_str(p, "ms");
     p = append_str(p, "\033[38;5;240m");
@@ -138,7 +94,6 @@ static inline char *draw_box(char *p)
 
 static inline char *draw_temperature(char *p, int temp, int row)
 {
-    p = APPEND_LIT(p, PRESET);
     p = append_str(p, "\033[");
     p = append_int(p, row);
     p = append_str(p, ";");
@@ -148,7 +103,7 @@ static inline char *draw_temperature(char *p, int temp, int row)
     p = append_str(p, BOLD);
     p = append_str(p, ctemp[(temp_val + 128) >> 4]);
     p = append_int(p, temp_val);
-    p = APPEND_LIT(p, BTOP_WHITE);
+    p = APPEND_LIT(p, WHITE NOBOLD);
     p = APPEND_LIT(p, "°C");
     p = append_str(p, NOBOLD);
 
@@ -167,8 +122,8 @@ static inline char *draw_frequency(char *p, int freq, int row)
     p = append_int(p, mhz / 1000);
     p = APPEND_LIT(p, ".");
     p = append_int(p, (mhz % 1000) / 100);
-    p = APPEND_LIT(p, " GHz");
     p = append_str(p, NOBOLD);
+    p = APPEND_LIT(p, " GHz");
 
     return p;
 }
@@ -212,7 +167,7 @@ void setup_terminal()
     p = append_str(p, BG_BLACK);
     p = append_str(p, "\033[2J");
     p = append_str(p, "\033[H");
-    p = append_str(p, PRESET);
+    p = append_str(p, WHITE);
 
     p = draw_box(p);
 
@@ -248,7 +203,7 @@ void render_interface(CpuMonitor* cpumon)
         p = APPEND_LIT(p, BOLD);
         p = APPEND_LIT(p, "C");
         p = append_int(p, i);
-        p = APPEND_LIT(p, PRESET);
+        p = APPEND_LIT(p, WHITE NOBOLD);
         
         p = append_str(p, "\033[");
         p = append_int(p, row);
@@ -260,14 +215,11 @@ void render_interface(CpuMonitor* cpumon)
         {
             int idx = (cpumon->graph_head + k) % GRAPH_WIDTH;
             int val = cpumon->graph_hist[i][idx];
-            p = append_str(p, cperc[(val >> 4) & 7]);
-            int block_idx = 0;
-            if (val > 0)  block_idx = 1; 
-            if (val > 20) block_idx = 2;
-            if (val > 40) block_idx = 3;
-            if (val > 60) block_idx = 4;
-            if (val > 80) block_idx = 5;
-            p = append_str(p, blocks[block_idx]);
+            if (val)
+                p = append_str(p, cperc[(val >> 4) & 7]);
+            else 
+                p = append_str(p, GRAY);
+            p = append_str(p, dots[(val >> 4) & 7]);
         }
 
         p = append_str(p, "\033[");
@@ -276,11 +228,14 @@ void render_interface(CpuMonitor* cpumon)
         p = append_int(p, UI_LEFT + UI_WIDTH - 5);
         p = append_str(p, "H");
         int usage = cpumon->usage[i];
-        p = append_str(p, cperc[(usage >> 4) & 7]);
-        if (usage < 10) {*p++ = ' '; *p++ = ' ';}
-        else if (usage < 100) *p++ = ' ';
+        if (usage)
+            p = append_str(p, cperc[(usage >> 4) & 7]);
+        else 
+            p = append_str(p, GRAY);
+        if (usage < 10) *p++ = ' ';
+        if (usage < 100) *p++ = ' ';
         p = append_int(p, usage);
-        p = append_str(p, PRESET);
+        p = append_str(p, WHITE);
         p = APPEND_LIT(p, "%");
     }
 
@@ -306,7 +261,7 @@ void render_interface(CpuMonitor* cpumon)
         p = append_int(p, frac);
         if (k < 2) p = append_str(p, "  ");
     }
-    p = append_str(p, PRESET);
+    p = append_str(p, WHITE);
 
     row = UI_TOP + UI_HEIGHT;
     p = draw_uptime(p, cpumon->uptime, row);
