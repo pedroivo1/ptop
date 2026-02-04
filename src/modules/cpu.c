@@ -1,10 +1,11 @@
-#include "cpu.h"
-#include "utils.h"
 #include <stdio.h>
 #include <unistd.h>
 #include <fcntl.h>
 #include <string.h>
 #include <sys/sysinfo.h>
+#include "cpu.h"
+#include "../utils.h"
+#include "../tui.h"
 
 static inline int read_sysfs_int(int fd)
 {
@@ -185,4 +186,134 @@ void update_metrics(CpuMonitor *cpumon)
     get_core_temp_c(cpumon);
     parse_cpu_stats(cpumon);
     get_system_load(cpumon);
+}
+
+// =============================================================================
+// ================================== DISPLAY ==================================
+// =============================================================================
+
+
+#define BORDER_C "\033[38;5;65m"
+
+static inline char *draw_temperature(char *p, int x, int y, int temp)
+{
+    p = tui_at(p, x, y);
+    p = append_str(p, BOLD);
+    p = append_str(p, gradient_temp[(temp + 128) >> 4]);
+    p = append_int(p, temp);
+    p = APPEND_LIT(p, WHITE NOBOLD);
+    p = APPEND_LIT(p, "°C");
+    p = append_str(p, NOBOLD);
+
+    return p;
+}
+
+static inline char *draw_frequency(char *p, int x, int y, int mhz)
+{
+    p = tui_at(p, x, y);
+    p = append_str(p, BOLD);
+    p = append_int(p, mhz / 1000);
+    p = APPEND_LIT(p, ".");
+    p = append_int(p, (mhz % 1000) / 100);
+    p = append_str(p, NOBOLD);
+    p = APPEND_LIT(p, " GHz");
+
+    return p;
+}
+
+static inline char *draw_label(char *p, int x, int y, int id)
+{
+    p = tui_at(p, x, y);
+    p = APPEND_LIT(p, BOLD);
+    p = APPEND_LIT(p, "C");
+    p = append_int(p, id);
+    p = APPEND_LIT(p, WHITE NOBOLD);
+
+    return p;
+}
+
+static inline char *draw_usage(char *p, int x, int y, int usage)
+{
+    
+    p = tui_at(p, x, y);
+    if (usage)
+        p = append_str(p, gradient_perc[(usage >> 4) & 7]);
+    else 
+        p = append_str(p, GRAY);
+    if (usage < 10) *p++ = ' ';
+    if (usage < 100) *p++ = ' ';
+    p = append_int(p, usage);
+    p = append_str(p, WHITE);
+    p = APPEND_LIT(p, "%");
+
+    return p;
+}
+
+static inline char *draw_avg_load(char *p, int x, int y, uint32_t avg[3])
+{
+    p = tui_at(p, x, y);
+    p = append_str(p, "AVG: ");
+    for (int k = 0; k < 3; k++)
+    {
+        unsigned long raw = avg[k];
+        int whole = raw >> 16;
+        int frac  = ((raw * 100) >> 16) % 100;
+        unsigned int l_idx = raw >> 17;
+        if (l_idx > 7) l_idx = 7;
+
+        p = append_str(p, gradient_perc[l_idx]);
+        p = append_int(p, whole);
+        p = append_str(p, ".");
+        if (frac < 10) *p++ = '0';
+        p = append_int(p, frac);
+        if (k < 2) p = append_str(p, "  ");
+    }
+    p = append_str(p, WHITE);
+
+    return p;
+}
+
+static inline char *draw_uptime(char *p, int x, int y, int uptime)
+{
+    p = tui_at(p, x, y);
+    long up = uptime;
+    int hours = up / 3600;
+    int mins = (up % 3600) / 60;
+    int secs = up % 60;
+    p = append_str(p, "Up: ");
+    if  (hours < 10) p = append_str(p, "0");
+    p = append_int(p, hours);
+    p = append_str(p, ":");
+    if (mins < 10) p = append_str(p, "0");
+    p = append_int(p, mins);
+    p = append_str(p, ":");
+    if (secs < 10) p = append_str(p, "0");
+    p = append_int(p, secs);
+
+    return p;
+}
+
+char *render_interface(CpuMonitor* cpumon, char *p)
+{
+    p = tui_draw_box(p, 1, 1, UI_WIDTH, UI_HEIGHT, BORDER_C);
+    p = tui_draw_up_space(p, UI_LEFT + 4, UI_TOP, 4);
+    p = tui_draw_up_space(p, UI_LEFT + 12, UI_TOP, 7);
+    p = tui_draw_bottom_space(p, UI_LEFT + 4, UI_TOP + UI_HEIGHT - 1, 21);
+
+    p = draw_temperature(p, UI_LEFT + 5, UI_TOP, cpumon->temp);
+    p = draw_frequency(p, UI_LEFT + 13, UI_TOP, cpumon->freq);
+
+    for (int i = 0; i < CORES_N; i++)
+    {
+        int y = UI_TOP + i + 1;
+        p = draw_label(p, UI_LEFT + 1, y, i);
+        p = tui_draw_graph(p, UI_LEFT + 5, y, cpumon->graph_hist[i], GRAPH_WIDTH, cpumon->graph_head);
+        p = draw_usage(p, UI_LEFT + UI_WIDTH - 5, y, cpumon->usage[i]);
+    }
+
+    p = draw_avg_load(p, UI_LEFT + 5, UI_TOP + UI_HEIGHT - 1, cpumon->load_avg);
+
+    p = draw_uptime(p, UI_LEFT + 2, UI_TOP + UI_HEIGHT + 1, cpumon->uptime);
+
+    return p;
 }

@@ -5,7 +5,12 @@
 #include "tui.h"
 #include "cfg.h"
 
-static const char* dots[8] = {
+const char *gradient_temp[16] = {
+    TEMP_0, TEMP_1, TEMP_2, TEMP_3, TEMP_4, TEMP_5, TEMP_6, TEMP_7,
+    TEMP_8, TEMP_9, TEMP_10, TEMP_11, TEMP_12, TEMP_13, TEMP_14, TEMP_15
+};
+
+const char* dots_braille[8] = {
     "\xE2\xA3\x80", // ⣀ (Nível 1)
     "\xE2\xA3\xA0", // ⣠
     "\xE2\xA3\xA4", // ⣤
@@ -16,25 +21,30 @@ static const char* dots[8] = {
     "\xE2\xA3\xBF"  // ⣿ (Nível 8 - Cheio)
 };
 
-static const char* graph_colors[8] = {
-    "\033[38;5;47m",
-    "\033[38;5;82m", 
-    "\033[38;5;154m", 
-    "\033[38;5;226m",
-    "\033[38;5;214m", 
-    "\033[38;5;208m", 
-    "\033[38;5;196m",
-    "\033[38;5;196m" 
+const char* gradient_perc[8] = {
+    PERC_0, PERC_1, PERC_2, PERC_3, PERC_4, PERC_5, PERC_6, PERC_7
 };
 
 static struct termios original_term;
-void tui_setup()
+
+void tui_setup(char *bg_color, char *font_color)
 {
     struct termios new_term;
     tcgetattr(STDIN_FILENO, &original_term);
     new_term = original_term;
     new_term.c_lflag &= ~(ECHO | ICANON);
     tcsetattr(STDIN_FILENO, TCSANOW, &new_term);
+
+    char buf[1024];
+    char *p = buf;
+    p = append_str(p, "\033[?1049h\033[?25l");
+    p = append_str(p, bg_color);
+    p = append_str(p, "\033[2J");
+    p = append_str(p, "\033[H");
+    p = append_str(p, font_color);
+
+    if (write(STDOUT_FILENO, buf, p - buf) == -1)
+        perror("write failed");
 }
 
 void tui_restore()
@@ -100,7 +110,7 @@ char *tui_draw_up_space(char *p, int x, int y, int len)
     p = append_str(p, "H");
 
     p = append_str(p, BOX_TR);
-    for (int i = 0; i < len - 2; i++)
+    for (int i = 0; i < len; i++)
         p = append_str(p, " ");
     p = append_str(p, BOX_TL);
 
@@ -116,7 +126,7 @@ char *tui_draw_bottom_space(char *p, int x, int y, int len)
     p = append_str(p, "H");
 
     p = append_str(p, BOX_BR);
-    for (int i = 0; i < len - 2; i++)
+    for (int i = 0; i < len; i++)
         p = append_str(p, " ");
     p = append_str(p, BOX_BL);
 
@@ -133,14 +143,18 @@ char *tui_draw_graph(char *p, int x, int y, uint8_t *data, int len, int head)
 
     for (int i = 0; i < len; i++)
     {
-        int idx = (head + i) % GRAPH_WIDTH;
+        int idx = (head + i) % len;
         int val = data[idx];
-        int dot_idx = (val * 9) >> 4;
-        p = append_str(p, graph_colors[dot_idx]);
+        int dot_idx = (val >> 4) & 7;
 
-        if (val > 0)
-            p = append_str(p, dots[dot_idx]);
-        else
-            p = append_str(p, "\033[38;5;236m·");
+        if (val > 0) {
+            p = append_str(p, gradient_perc[dot_idx]);
+        } else {
+            p = append_str(p, "\033[38;5;236m"); 
+        }
+
+        p = append_str(p, dots_braille[dot_idx]); 
     }
+    
+    return p;
 }

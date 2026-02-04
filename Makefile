@@ -1,30 +1,9 @@
 CC = gcc
 CFLAGS = -Wall -I.
 OPCFLAGS = -O3 -march=native -fno-stack-protector -flto -s
-SRCS = src/main.c src/monitor.c src/display.c
+SRCS = src/main.c src/modules/cpu.c src/tui.c
 
 .PHONY: all run test clean cpumon
 
-# Compilation
-all: src/main.c src/utils.c $(HEADERS)
-	$(CC) $(CFLAGS) src/main.c src/utils.c -o ptop
-
 cpumon:
 	$(CC) $(CFLAGS) $(OPCFLAGS) $(SRCS) -o cpumon
-
-v_cpumon:
-	valgrind --track-origins=yes --track-fds=yes -s ./cpumon > /dev/null
-
-# Tests
-t: src/test.c src/utils.c $(HEADERS)
-	$(CC) $(CFLAGS) -g src/test.c src/utils.c -o test
-
-vtest: t
-	valgrind --leak-check=full --track-origins=yes -s ./test > /dev/null
-
-test: t
-	./test
-
-# Clean
-clean:
-	rm -f ptop test cpumon

@@ -2,7 +2,7 @@
 #define MONITOR_H
 
 #include <stdint.h>
-#include "cfg.h"
+#include "../cfg.h"
 
 typedef struct
 {
@@ -29,5 +29,6 @@ void init_cpumon(CpuMonitor *cpumon);
 void cleanup_cpumon(CpuMonitor *cpumon);
 int get_coretemp_id();
 void update_metrics(CpuMonitor *cpumon);
+char *render_interface(CpuMonitor* cpumon, char *p);
 
 #endif
