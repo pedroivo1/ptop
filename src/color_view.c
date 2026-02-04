@@ -1,5 +1,5 @@
 #include <stdio.h>
-#include "display.h"
+#include "display.c"
 
 static const char* ctemp[16] =
 {

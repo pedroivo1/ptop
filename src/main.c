@@ -1,5 +1,5 @@
 #include "cfg.h"
-#include "monitor.h"
+#include "cpu.h"
 #include "display.h"
 #include <signal.h>
 #include <unistd.h>

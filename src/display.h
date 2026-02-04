@@ -1,7 +1,7 @@
 #ifndef DISPLAY_H
 #define DISPLAY_H
 
-#include "monitor.h"
+#include "cpu.h"
 
 void setup_terminal();
 void restore_terminal();
