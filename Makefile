@@ -3,7 +3,7 @@ CFLAGS = -Wall -I.
 OPCFLAGS = -O3 -march=native -fno-stack-protector -flto -s
 SRCS = src/main.c src/modules/cpu.c src/tui.c
 
-.PHONY: all run test clean cpumon
+.PHONY: all ptop
 
-cpumon:
-	$(CC) $(CFLAGS) $(OPCFLAGS) $(SRCS) -o cpumon
+all:
+	$(CC) $(CFLAGS) $(OPCFLAGS) $(SRCS) -o ptop
