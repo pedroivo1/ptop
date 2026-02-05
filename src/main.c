@@ -22,11 +22,12 @@ int main()
     static char buf[OUT_BUFF_LEN] __attribute__((aligned(64)));
 
     int delay = DELAY_MS * 1000;
+    int redraw = 1;
     tui_setup(BG_BLACK, WHITE);
     while (run)
     {
         char *p = buf;
-        p = tui_begin_frame(p);
+        p = tui_begin_frame(p, &redraw);
 
         update_cpu_metrics(&cpumon);
 
@@ -35,6 +36,9 @@ int main()
         int cpu_y = margin;
         int cpu_w = term_w;
         int cpu_h = term_h;
+        if (redraw)
+            p = render_static_interface(p, cpu_x, cpu_y, cpu_w, cpu_h);
+
         p = render_interface(&cpumon, p, cpu_x, cpu_y, cpu_w, cpu_h);
 
         if (write(STDOUT_FILENO, buf, p - buf) == -1)

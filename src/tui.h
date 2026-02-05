@@ -73,7 +73,7 @@ void tui_update_size();
 char *tui_draw_box(char *p, int x, int y, int w, int h, char *color);
 char *tui_draw_up_space(char *p, int x, int y, int len);
 char *tui_draw_bottom_space(char *p, int x, int y, int len);
-char *tui_draw_graph(char *p, int x, int y, uint8_t *data, int len, int head);
+char *tui_draw_graph(char *p, uint8_t *data, int len, int head);
 
 static inline char *tui_at(char *p, int x, int y)
 {
@@ -91,6 +91,6 @@ extern int term_h;
 void tui_setup(char *bg_color, char *font_color);
 void tui_restore();
 void handle_winch(int sig);
-char *tui_begin_frame(char *p);
+char *tui_begin_frame(char *p, int *resized);
 
 #endif

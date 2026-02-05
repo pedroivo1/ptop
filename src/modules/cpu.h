@@ -31,6 +31,7 @@ void init_cpumon(CpuMonitor *cpumon);
 void cleanup_cpumon(CpuMonitor *cpumon);
 int get_coretemp_id();
 void update_cpu_metrics(CpuMonitor *cpumon);
+char *render_static_interface(char *p, int x, int y, int w, int h);
 char *render_interface(CpuMonitor* cpumon, char *p, int x, int y, int w, int h);
 
 #endif

@@ -134,14 +134,8 @@ char *tui_draw_bottom_space(char *p, int x, int y, int len)
     return p;
 }
 
-char *tui_draw_graph(char *p, int x, int y, uint8_t *data, int len, int head)
+char *tui_draw_graph(char *p, uint8_t *data, int len, int head)
 {
-    p = append_str(p, "\033[");
-    p = append_int(p, y);
-    p = append_str(p, ";");
-    p = append_int(p, x);
-    p = append_str(p, "H");
-
     for (int i = 0; i < len; i++)
     {
         int idx = (head + i) % len;
@@ -179,13 +173,18 @@ void handle_winch(int sig)
     win_resized = 1;
 }
 
-char *tui_begin_frame(char *p)
+char *tui_begin_frame(char *p, int *resized)
 {
     if (win_resized)
     {
         tui_update_size();
         p = append_str(p, "\033[2J");
         win_resized = 0;
+        if (resized) *resized = 1;
+    }
+    else
+    {
+        if (resized) *resized = 0;
     }
     return p;
 }
