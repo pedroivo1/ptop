@@ -180,7 +180,7 @@ static void get_system_load(CpuMonitor *cpumon)
     }
 }
 
-void update_metrics(CpuMonitor *cpumon)
+void update_cpu_metrics(CpuMonitor *cpumon)
 {
     get_core_freq_mhz(cpumon);
     get_core_temp_c(cpumon);
@@ -188,11 +188,10 @@ void update_metrics(CpuMonitor *cpumon)
     get_system_load(cpumon);
 }
 
+
 // =============================================================================
 // ================================== DISPLAY ==================================
 // =============================================================================
-
-
 #define BORDER_C "\033[38;5;65m"
 
 static inline char *draw_temperature(char *p, int x, int y, int temp)

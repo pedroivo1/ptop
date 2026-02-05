@@ -22,12 +22,12 @@ int main()
     static char buf[OUT_BUFF_LEN] __attribute__((aligned(64)));
 
     int delay = DELAY_MS * 1000;
-
     tui_setup(BG_BLACK, WHITE);
     while (run)
     {
         char *p = buf;
-        update_metrics(&cpumon);
+        update_cpu_metrics(&cpumon);
+        p = tui_begin_frame(p);
         p = render_interface(&cpumon, p);
 
         if (write(STDOUT_FILENO, buf, p - buf) == -1)

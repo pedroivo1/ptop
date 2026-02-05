@@ -1,6 +1,8 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <termios.h>
+#include <sys/ioctl.h>
+#include <signal.h>
 #include "utils.h"
 #include "tui.h"
 #include "cfg.h"
@@ -27,6 +29,10 @@ const char* gradient_perc[8] = {
 
 static struct termios original_term;
 
+int term_w = 0;
+int term_h = 0;
+static volatile sig_atomic_t win_resized = 1;
+
 void tui_setup(char *bg_color, char *font_color)
 {
     struct termios new_term;
@@ -34,6 +40,8 @@ void tui_setup(char *bg_color, char *font_color)
     new_term = original_term;
     new_term.c_lflag &= ~(ECHO | ICANON);
     tcsetattr(STDIN_FILENO, TCSANOW, &new_term);
+
+    signal(SIGWINCH, handle_winch);
 
     char buf[1024];
     char *p = buf;
@@ -156,5 +164,35 @@ char *tui_draw_graph(char *p, int x, int y, uint8_t *data, int len, int head)
         p = append_str(p, dots_braille[dot_idx]); 
     }
     
+    return p;
+}
+
+void tui_update_size()
+{
+    struct winsize ws;
+
+    if (ioctl(STDOUT_FILENO, TIOCGWINSZ, &ws) == -1) {
+        term_w = 80;
+        term_h = 24;
+    } else {
+        term_w = ws.ws_col;
+        term_h = ws.ws_row;
+    }
+}
+
+void handle_winch(int sig)
+{
+    (void)sig;
+    win_resized = 1;
+}
+
+char *tui_begin_frame(char *p)
+{
+    if (win_resized)
+    {
+        tui_update_size();
+        p = append_str(p, "\033[2J"); 
+        win_resized = 0;
+    }
     return p;
 }
