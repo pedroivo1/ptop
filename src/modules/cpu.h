@@ -4,6 +4,8 @@
 #include <stdint.h>
 #include "../cfg.h"
 
+#define CPU_BORDER_C "\033[38;5;65m"
+
 typedef struct
 {
     uint64_t prev_total[CORES_N];
@@ -29,6 +31,6 @@ void init_cpumon(CpuMonitor *cpumon);
 void cleanup_cpumon(CpuMonitor *cpumon);
 int get_coretemp_id();
 void update_cpu_metrics(CpuMonitor *cpumon);
-char *render_interface(CpuMonitor* cpumon, char *p);
+char *render_interface(CpuMonitor* cpumon, char *p, int x, int y, int w, int h);
 
 #endif

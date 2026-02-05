@@ -192,7 +192,6 @@ void update_cpu_metrics(CpuMonitor *cpumon)
 // =============================================================================
 // ================================== DISPLAY ==================================
 // =============================================================================
-#define BORDER_C "\033[38;5;65m"
 
 static inline char *draw_temperature(char *p, int x, int y, int temp)
 {
@@ -292,27 +291,32 @@ static inline char *draw_uptime(char *p, int x, int y, int uptime)
     return p;
 }
 
-char *render_interface(CpuMonitor* cpumon, char *p)
+char *render_interface(CpuMonitor* cpumon, char *p, int x, int y, int w, int h)
 {
-    p = tui_draw_box(p, 1, 1, UI_WIDTH, UI_HEIGHT, BORDER_C);
-    p = tui_draw_up_space(p, UI_LEFT + 4, UI_TOP, 4);
-    p = tui_draw_up_space(p, UI_LEFT + 12, UI_TOP, 7);
-    p = tui_draw_bottom_space(p, UI_LEFT + 4, UI_TOP + UI_HEIGHT - 1, 21);
+    p = tui_draw_box(p, x, y, w, h, CPU_BORDER_C);
+    int table_x = x + 1;
+    int table_w = 32;
+    int table_h = CORES_N + 2;
+    int table_y = y + ((h - table_h) >> 1);
+    p = tui_draw_box(p, table_x, table_y, table_w, table_h, GRAY);
+    p = tui_draw_up_space(p, table_x + 4, table_y, 4);
+    p = tui_draw_up_space(p, table_x + 12, table_y, 7);
+    p = tui_draw_bottom_space(p, table_x + 4, table_y + table_h - 1, 21);
 
-    p = draw_temperature(p, UI_LEFT + 5, UI_TOP, cpumon->temp);
-    p = draw_frequency(p, UI_LEFT + 13, UI_TOP, cpumon->freq);
+    p = draw_temperature(p, table_x + 5, table_y, cpumon->temp);
+    p = draw_frequency(p, table_x + 13, table_y, cpumon->freq);
 
     for (int i = 0; i < CORES_N; i++)
     {
-        int y = UI_TOP + i + 1;
-        p = draw_label(p, UI_LEFT + 1, y, i);
-        p = tui_draw_graph(p, UI_LEFT + 5, y, cpumon->graph_hist[i], GRAPH_WIDTH, cpumon->graph_head);
-        p = draw_usage(p, UI_LEFT + UI_WIDTH - 5, y, cpumon->usage[i]);
+        int row = table_y + i + 1;
+        p = draw_label(p, table_x + 1, row, i);
+        p = tui_draw_graph(p, table_x + 5, row, cpumon->graph_hist[i], GRAPH_WIDTH, cpumon->graph_head);
+        p = draw_usage(p, table_x + table_w - 5, row, cpumon->usage[i]);
     }
 
-    p = draw_avg_load(p, UI_LEFT + 5, UI_TOP + UI_HEIGHT - 1, cpumon->load_avg);
+    p = draw_avg_load(p, table_x + 5, table_y + table_h - 1, cpumon->load_avg);
 
-    p = draw_uptime(p, UI_LEFT + 2, UI_TOP + UI_HEIGHT + 1, cpumon->uptime);
+    p = draw_uptime(p, table_x + 1, y + h - 2, cpumon->uptime);
 
     return p;
 }

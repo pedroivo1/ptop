@@ -49,7 +49,6 @@
 #define BOX_V  "│"
 
 // --- BOX SIZES ---
-#define UI_WIDTH  32
 #define UI_HEIGHT (CORES_N + 2)
 #define UI_TOP    1
 #define UI_LEFT   1

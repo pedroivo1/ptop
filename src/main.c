@@ -26,9 +26,16 @@ int main()
     while (run)
     {
         char *p = buf;
-        update_cpu_metrics(&cpumon);
         p = tui_begin_frame(p);
-        p = render_interface(&cpumon, p);
+
+        update_cpu_metrics(&cpumon);
+
+        int margin = 1;
+        int cpu_x = margin;
+        int cpu_y = margin;
+        int cpu_w = term_w;
+        int cpu_h = term_h;
+        p = render_interface(&cpumon, p, cpu_x, cpu_y, cpu_w, cpu_h);
 
         if (write(STDOUT_FILENO, buf, p - buf) == -1)
             perror("write failed");
