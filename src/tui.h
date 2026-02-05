@@ -40,12 +40,22 @@
 #define PERC_6   "\033[38;5;196m"
 #define PERC_7   "\033[38;5;129m"
 
+// --- BRAILE DOTS ---
+#define DOTS_1   "\xE2\xA3\x80"  // ⣀
+#define DOTS_2   "\xE2\xA3\xA0"  // ⣠
+#define DOTS_3   "\xE2\xA3\xA4"  // ⣤
+#define DOTS_4   "\xE2\xA3\xA6"  // ⣦
+#define DOTS_5   "\xE2\xA3\xB6"  // ⣶
+#define DOTS_6   "\xE2\xA3\xB7"  // ⣷
+#define DOTS_7   "\xE2\xA3\xBF"  // ⣿
+#define DOTS_8   "\xE2\xA3\xBF"  // ⣿
+
 // --- BOX ---
 #define BOX_TL "┌"
 #define BOX_TR "┐"
 #define BOX_BL "└"
 #define BOX_BR "┘"
-#define BOX_H  "─" 
+#define BOX_H  "─"
 #define BOX_V  "│"
 
 // --- BOX SIZES ---

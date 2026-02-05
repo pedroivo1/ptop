@@ -31,4 +31,17 @@ static inline char *append_str(char *buf, const char *str)
     return buf;
 }
 
+static inline int read_sysfs_int(int fd)
+{
+    char buf[16];
+    int val = 0;
+    ssize_t bytes_read = pread(fd, buf, sizeof(buf) - 1, 0);
+    if (bytes_read > 0)
+    {
+        char *p = buf;
+        while (*p >= '0' && *p <= '9') val = (val * 10) + (*p++ - '0');
+    }
+    return val;
+}
+
 #endif

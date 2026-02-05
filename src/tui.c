@@ -13,14 +13,7 @@ const char *gradient_temp[16] = {
 };
 
 const char* dots_braille[8] = {
-    "\xE2\xA3\x80", // ⣀ (Nível 1)
-    "\xE2\xA3\xA0", // ⣠
-    "\xE2\xA3\xA4", // ⣤
-    "\xE2\xA3\xA6", // ⣦
-    "\xE2\xA3\xB6", // ⣶
-    "\xE2\xA3\xB7", // ⣷
-    "\xE2\xA3\xBF", // ⣿
-    "\xE2\xA3\xBF"  // ⣿ (Nível 8 - Cheio)
+    DOTS_1, DOTS_2, DOTS_3, DOTS_4, DOTS_5, DOTS_6, DOTS_7, DOTS_8
 };
 
 const char* gradient_perc[8] = {
@@ -158,12 +151,12 @@ char *tui_draw_graph(char *p, int x, int y, uint8_t *data, int len, int head)
         if (val > 0) {
             p = append_str(p, gradient_perc[dot_idx]);
         } else {
-            p = append_str(p, "\033[38;5;236m"); 
+            p = append_str(p, "\033[38;5;236m");
         }
 
-        p = append_str(p, dots_braille[dot_idx]); 
+        p = append_str(p, dots_braille[dot_idx]);
     }
-    
+
     return p;
 }
 
@@ -191,7 +184,7 @@ char *tui_begin_frame(char *p)
     if (win_resized)
     {
         tui_update_size();
-        p = append_str(p, "\033[2J"); 
+        p = append_str(p, "\033[2J");
         win_resized = 0;
     }
     return p;

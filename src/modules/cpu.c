@@ -7,20 +7,6 @@
 #include "../utils.h"
 #include "../tui.h"
 
-static inline int read_sysfs_int(int fd)
-{
-    char buf[16];
-    int val = 0;
-    ssize_t bytes_read = pread(fd, buf, sizeof(buf) - 1, 0);
-
-    if (bytes_read > 0)
-    {
-        char *p = buf;
-        while (*p >= '0' && *p <= '9') val = (val * 10) + (*p++ - '0');
-    }
-    return val;
-}
-
 void init_cpumon(CpuMonitor *cpumon)
 {
     memset(cpumon, 0, sizeof(*cpumon));
@@ -54,7 +40,7 @@ void cleanup_cpumon(CpuMonitor *cpumon)
     close(cpumon->fd_stat);
     close(cpumon->fd_temp);
     for (int i = 0; i < PHY_CORES_N; i++)
-        close(cpumon->fd_freq[i]);        
+        close(cpumon->fd_freq[i]);
 }
 
 int get_coretemp_id()
@@ -130,7 +116,7 @@ static void parse_cpu_stats(CpuMonitor* cpumon)
         }
 
         // IDLE, IOWAIT
-        for (int k=0; k<2; k++) 
+        for (int k=0; k<2; k++)
         {
             val = 0;
             while (*p >= '0') val = (val * 10) + (*p++ - '0');
@@ -144,7 +130,7 @@ static void parse_cpu_stats(CpuMonitor* cpumon)
             val = 0;
             while (*p >= '0') val = (val * 10) + (*p++ - '0');
             active += val;
-            while (*p == ' ') p++; 
+            while (*p == ' ') p++;
         }
 
         while (*p && *p != '\n') p++;
@@ -202,7 +188,6 @@ static inline char *draw_temperature(char *p, int x, int y, int temp)
     p = APPEND_LIT(p, WHITE NOBOLD);
     p = APPEND_LIT(p, "°C");
     p = append_str(p, NOBOLD);
-
     return p;
 }
 
@@ -215,7 +200,6 @@ static inline char *draw_frequency(char *p, int x, int y, int mhz)
     p = append_int(p, (mhz % 1000) / 100);
     p = append_str(p, NOBOLD);
     p = APPEND_LIT(p, " GHz");
-
     return p;
 }
 
@@ -226,24 +210,21 @@ static inline char *draw_label(char *p, int x, int y, int id)
     p = APPEND_LIT(p, "C");
     p = append_int(p, id);
     p = APPEND_LIT(p, WHITE NOBOLD);
-
     return p;
 }
 
 static inline char *draw_usage(char *p, int x, int y, int usage)
 {
-    
     p = tui_at(p, x, y);
     if (usage)
         p = append_str(p, gradient_perc[(usage >> 4) & 7]);
-    else 
+    else
         p = append_str(p, GRAY);
     if (usage < 10) *p++ = ' ';
     if (usage < 100) *p++ = ' ';
     p = append_int(p, usage);
     p = append_str(p, WHITE);
     p = APPEND_LIT(p, "%");
-
     return p;
 }
 
@@ -287,13 +268,15 @@ static inline char *draw_uptime(char *p, int x, int y, int uptime)
     p = append_str(p, ":");
     if (secs < 10) p = append_str(p, "0");
     p = append_int(p, secs);
-
     return p;
 }
 
 char *render_interface(CpuMonitor* cpumon, char *p, int x, int y, int w, int h)
 {
+    // --- MAIN BOX ---
     p = tui_draw_box(p, x, y, w, h, CPU_BORDER_C);
+
+    // --- TABLE BOX ---
     int table_x = x + 1;
     int table_w = 32;
     int table_h = CORES_N + 2;
@@ -303,9 +286,9 @@ char *render_interface(CpuMonitor* cpumon, char *p, int x, int y, int w, int h)
     p = tui_draw_up_space(p, table_x + 12, table_y, 7);
     p = tui_draw_bottom_space(p, table_x + 4, table_y + table_h - 1, 21);
 
+    // --- TABLE METRICS ---
     p = draw_temperature(p, table_x + 5, table_y, cpumon->temp);
     p = draw_frequency(p, table_x + 13, table_y, cpumon->freq);
-
     for (int i = 0; i < CORES_N; i++)
     {
         int row = table_y + i + 1;
@@ -313,7 +296,6 @@ char *render_interface(CpuMonitor* cpumon, char *p, int x, int y, int w, int h)
         p = tui_draw_graph(p, table_x + 5, row, cpumon->graph_hist[i], GRAPH_WIDTH, cpumon->graph_head);
         p = draw_usage(p, table_x + table_w - 5, row, cpumon->usage[i]);
     }
-
     p = draw_avg_load(p, table_x + 5, table_y + table_h - 1, cpumon->load_avg);
 
     p = draw_uptime(p, table_x + 1, y + h - 2, cpumon->uptime);
