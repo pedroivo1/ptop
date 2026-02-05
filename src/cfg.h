@@ -2,8 +2,6 @@
 #define CFG_H
 
 // --- HARDWARE DEFINITIONS ---
-#define MODEL "i7-10750H"
-#define MODEL_LEN 9
 #define CORES_N 12
 #define PHY_CORES_N 6
 #define HWMON_N 9
