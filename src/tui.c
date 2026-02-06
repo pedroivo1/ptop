@@ -60,9 +60,9 @@ char *tui_draw_box(char *p, int x, int y, int w, int h, char *color)
     p = append_str(p, color);
 
     p = append_str(p, "\033[");
-    p = append_int(p, y);
+    p = append_num(p, y);
     p = append_str(p, ";");
-    p = append_int(p, x);
+    p = append_num(p, x);
     p = append_str(p, "H");
     p = append_str(p, BOX_TL);
     for (int i = 0; i < w - 2; i++)
@@ -72,9 +72,9 @@ char *tui_draw_box(char *p, int x, int y, int w, int h, char *color)
     for (int i = 0; i < h - 2; i++)
     {
         p = append_str(p, "\033[");
-        p = append_int(p, y+1+i);
+        p = append_num(p, y+1+i);
         p = append_str(p, ";");
-        p = append_int(p, x+w-1);
+        p = append_num(p, x+w-1);
         p = append_str(p, "H");
         p = append_str(p, BOX_V);
     }
@@ -82,17 +82,17 @@ char *tui_draw_box(char *p, int x, int y, int w, int h, char *color)
     for (int i = 0; i < h - 2; i++)
     {
         p = append_str(p, "\033[");
-        p = append_int(p, y+1+i);
+        p = append_num(p, y+1+i);
         p = append_str(p, ";");
-        p = append_int(p, x);
+        p = append_num(p, x);
         p = append_str(p, "H");
         p = append_str(p, BOX_V);
     }
 
     p = append_str(p, "\033[");
-    p = append_int(p, y+h-1);
+    p = append_num(p, y+h-1);
     p = append_str(p, ";");
-    p = append_int(p, x);
+    p = append_num(p, x);
     p = append_str(p, "H");
     p = append_str(p, BOX_BL);
     for (int i = 0; i < w - 2; i++)
@@ -105,9 +105,9 @@ char *tui_draw_box(char *p, int x, int y, int w, int h, char *color)
 char *tui_draw_up_space(char *p, int x, int y, int len)
 {
     p = append_str(p, "\033[");
-    p = append_int(p, y);
+    p = append_num(p, y);
     p = append_str(p, ";");
-    p = append_int(p, x);
+    p = append_num(p, x);
     p = append_str(p, "H");
 
     p = append_str(p, BOX_TR);
@@ -121,9 +121,9 @@ char *tui_draw_up_space(char *p, int x, int y, int len)
 char *tui_draw_bottom_space(char *p, int x, int y, int len)
 {
     p = append_str(p, "\033[");
-    p = append_int(p, y);
+    p = append_num(p, y);
     p = append_str(p, ";");
-    p = append_int(p, x);
+    p = append_num(p, x);
     p = append_str(p, "H");
 
     p = append_str(p, BOX_BR);

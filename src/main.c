@@ -1,6 +1,8 @@
 #include <signal.h>
 #include <unistd.h>
 #include <stdio.h>
+#include <stdalign.h>
+#include <poll.h>
 #include "cfg.h"
 #include "modules/cpu.h"
 #include "tui.h"
@@ -19,11 +21,16 @@ int main()
     CpuMonitor cpumon;
     init_cpumon(&cpumon);
 
-    static char buf[OUT_BUFF_LEN] __attribute__((aligned(64)));
+    static alignas(64) char buf[OUT_BUFF_LEN];
 
     int delay = DELAY_MS * 1000;
     int redraw = 1;
     tui_setup(BG_BLACK, WHITE);
+
+    struct pollfd fds[1];
+    fds[0].fd = STDIN_FILENO;
+    fds[0].events = POLLIN;
+
     while (run)
     {
         char *p = buf;
@@ -44,9 +51,17 @@ int main()
         if (write(STDOUT_FILENO, buf, p - buf) == -1)
             perror("write failed");
 
-        usleep(delay);
+        int ret = poll(fds, 1, DELAY_MS); 
+    
+        if (ret > 0 && (fds[0].revents & POLLIN))
+        {
+            char key;
+            if (read(STDIN_FILENO, &key, 1) > 0)
+            {
+                if (key == 'q') run = 0;
+            }
+        }
     }
-
     cleanup_cpumon(&cpumon);
     tui_restore();
 

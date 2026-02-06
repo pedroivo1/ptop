@@ -78,9 +78,9 @@ char *tui_draw_graph(char *p, uint8_t *data, int len, int head);
 static inline char *tui_at(char *p, int x, int y)
 {
     p = append_str(p, "\033[");
-    p = append_int(p, y);
+    p = append_num(p, y);
     p = append_str(p, ";");
-    p = append_int(p, x);
+    p = append_num(p, x);
     p = append_str(p, "H");
     return p;
 }
