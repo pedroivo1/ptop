@@ -10,5 +10,5 @@ typedef struct
     int fd_mem;
 
 } MemMonitor;
-// MEM_BUFF_LEN
+
 void init_memmon(MemMonitor *memmon);

@@ -1,5 +1,5 @@
 #include <stdio.h>
-#include "display.c"
+#include "../src/tui.c"
 
 static const char* ctemp[16] =
 {

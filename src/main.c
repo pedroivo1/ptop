@@ -11,6 +11,7 @@ volatile sig_atomic_t run = 1;
 
 void handle_sigint(int sig)
 {
+    (void)sig;
     run = 0;
 }
 
