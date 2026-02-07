@@ -1,0 +1,7 @@
+# --- Binarys ---
+ptop
+run_tests
+show_colors
+
+# --- Object Files ---
+*.o
