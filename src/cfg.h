@@ -6,6 +6,9 @@
 #define PHY_CORES_N 6
 #define HWMON_N 9
 
+// --- SETTINGS ---
+#define DELAY_MS 500
+
 // --- PATHS & BUFFERS ---
 #define STAT_PATH "/proc/stat"
 #define STAT_BUFF_LEN (128*CORES_N)
@@ -14,9 +17,6 @@
 #define OUT_BUFF_LEN 8192
 #define CORE_LABEL_NAME "coretemp"
 #define CORE_LABEL_NAME_N 8
-
-// --- SETTINGS ---
-#define DELAY_MS 500
 
 // --- UI CONSTANTS NEEDED FOR STRUCTS ---
 #define GRAPH_WIDTH 21

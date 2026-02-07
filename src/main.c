@@ -23,7 +23,6 @@ int main()
 
     static alignas(64) char buf[OUT_BUFF_LEN];
 
-    int delay = DELAY_MS * 1000;
     int redraw = 1;
     tui_setup(BG_BLACK, WHITE);
 
