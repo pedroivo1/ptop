@@ -13,7 +13,6 @@
 #define C_VALUE   "\033[38;5;255m"
 #define C_BAR_BG  "\033[38;5;236m"
 
-// Cores específicas das barras
 #define C_USED    "\033[38;5;160m"
 #define C_AVAIL   "\033[38;5;112m"
 #define C_CACHE   "\033[38;5;214m"
@@ -63,9 +62,7 @@ void update_mem_data(MemMon *memmon)
     parse_mem(memmon);
 }
 
-static char *draw_meter(char *p, int x, int y, int w,
-                        const char *label, const char *color_bar,
-                        int perc, uint64_t val_kb)
+static char *draw_meter(char *p, int x, int y, int w, const char *label, const char *color_bar, int perc, uint64_t val_kb)
 {
     int label_w = 12;
     int value_w = 11;
@@ -116,10 +113,9 @@ char *draw_mem_data(MemMon *memmon, char *p, int x, int y, int w, int h)
     int current_y = y + 1;
     int inner_w = w - 4;
 
-    // RAM Header
     p = tui_at(p, start_x, current_y++);
     p = append_str(p, "\033[1mRAM\033[22m Total: ");
-    // Total em GiB
+
     p = append_fixed2(p, memmon->total, 20, 100);
     p = append_str(p, " GiB");
 

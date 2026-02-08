@@ -90,7 +90,7 @@ static void get_freq_mhz(CpuMon *cpumon)
 
 static void parse_stats(CpuMon* cpumon)
 {
-    static alignas(64) char buf[STAT_BUFF_LEN];
+    char buf[STAT_BUFF_LEN];
     ssize_t bytes_read = pread(cpumon->fd_stat, buf, sizeof(buf) - 1, 0);
     if (bytes_read < 0) return;
 

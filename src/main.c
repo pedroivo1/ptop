@@ -1,4 +1,3 @@
-#define _GNU_SOURCE
 #include <stdio.h>
 #include <unistd.h>
 #include <signal.h>
@@ -21,11 +20,12 @@ void handle_sigint(int sig)
 int main()
 {
     signal(SIGINT, handle_sigint);
-
+    
     AppContext ctx;
     app_init(&ctx);
 
     tui_setup(BG_BLACK, WHITE);
+    
     static alignas(64) char buf[OUT_BUFF_LEN];
 
     uint64_t last_update_time = 0;
@@ -35,49 +35,20 @@ int main()
     {
         now = current_time_ms();
 
-        int update_data_tick = 0;
-        if (now - last_update_time >= DELAY_MS)
+        int is_tick = (last_update_time == 0 || now - last_update_time >= DELAY_MS);
+
+        if (is_tick)
         {
-            update_data_tick = 1;
             last_update_time = now;
+            app_update_state(&ctx);
         }
 
-        char *p = buf;
-
-        p = tui_begin_frame(p, &ctx.needs_resize);
-        if (ctx.needs_resize) update_layout(&ctx);
-
-        if (ctx.force_redraw && !ctx.needs_resize) p = append_str(p, "\033[2J");
-
-        if (update_data_tick)
+        if (is_tick || ctx.needs_resize || ctx.force_redraw)
         {
-            if (ctx.show_cpu) update_cpu_data(&ctx.cpu);
-            if (ctx.show_mem) update_mem_data(&ctx.mem);
-        }
+            int bytes_written = app_render_frame(&ctx, buf);
 
-        if (update_data_tick || ctx.needs_resize || ctx.force_redraw)
-        {
-            int draw_static = ctx.force_redraw || ctx.needs_resize;
-
-            if (ctx.show_cpu)
-            {
-                if (draw_static)
-                    p = draw_cpu_ui(p, ctx.r_cpu.x, ctx.r_cpu.y, ctx.r_cpu.w, ctx.r_cpu.h);
-
-                p = draw_cpu_data(&ctx.cpu, p, ctx.r_cpu.x, ctx.r_cpu.y, ctx.r_cpu.w, ctx.r_cpu.h);
-            }
-
-            if (ctx.show_mem)
-            {
-                if (draw_static)
-                    p = draw_mem_ui(p, ctx.r_mem.x, ctx.r_mem.y, ctx.r_mem.w, ctx.r_mem.h);
-
-                p = draw_mem_data(&ctx.mem, p, ctx.r_mem.x, ctx.r_mem.y, ctx.r_mem.w, ctx.r_mem.h);
-            }
-
-            ctx.force_redraw = 0;
-
-            if (write(STDOUT_FILENO, buf, p - buf) == -1) break;
+            if (bytes_written > 0)
+                if (write(STDOUT_FILENO, buf, bytes_written) == -1) break;
         }
 
         int time_spent = (int)(current_time_ms() - last_update_time);

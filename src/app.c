@@ -7,6 +7,7 @@
 #include "app.h"
 #include "tui.h"
 #include "cfg.h"
+#include "utils.h"
 
 void app_init(AppContext *ctx)
 {
@@ -78,10 +79,21 @@ void handle_input(AppContext *ctx, int timeout_ms)
         char key;
         if (read(STDIN_FILENO, &key, 1) > 0)
         {
+            if (key == 0x1B)
+            {
+                char trash[128];
+                struct pollfd pfd_drain = { STDIN_FILENO, POLLIN, 0 };
+
+                while(poll(&pfd_drain, 1, 0) > 0) {
+                    if (read(STDIN_FILENO, trash, sizeof(trash)) <= 0) break;
+                }
+                return;
+            }
+
             switch (key)
             {
                 case 'q':
-                case 0x03:
+                case 0x03: // CTRL+C
                     ctx->running = 0;
                     break;
 
@@ -105,4 +117,50 @@ void handle_input(AppContext *ctx, int timeout_ms)
     {
         if (g_signal_quit) ctx->running = 0;
     }
+}
+
+void app_update_state(AppContext *ctx)
+{
+    if (ctx->show_cpu) update_cpu_data(&ctx->cpu);
+    if (ctx->show_mem) update_mem_data(&ctx->mem);
+}
+
+int app_render_frame(AppContext *ctx, char *buf)
+{
+    char *p = buf;
+    
+    int physical_resize = 0;
+    p = tui_begin_frame(p, &physical_resize);
+    
+    if (physical_resize) {
+        ctx->needs_resize = 1;
+        update_layout(ctx);
+    }
+
+    if (ctx->force_redraw && !ctx->needs_resize) {
+        p = append_str(p, "\033[2J");
+    }
+
+    int draw_static = ctx->force_redraw || ctx->needs_resize;
+
+    if (ctx->show_cpu)
+    {
+        if (draw_static)
+            p = draw_cpu_ui(p, ctx->r_cpu.x, ctx->r_cpu.y, ctx->r_cpu.w, ctx->r_cpu.h);
+
+        p = draw_cpu_data(&ctx->cpu, p, ctx->r_cpu.x, ctx->r_cpu.y, ctx->r_cpu.w, ctx->r_cpu.h);
+    }
+
+    if (ctx->show_mem)
+    {
+        if (draw_static)
+            p = draw_mem_ui(p, ctx->r_mem.x, ctx->r_mem.y, ctx->r_mem.w, ctx->r_mem.h);
+
+        p = draw_mem_data(&ctx->mem, p, ctx->r_mem.x, ctx->r_mem.y, ctx->r_mem.w, ctx->r_mem.h);
+    }
+
+    ctx->force_redraw = 0;
+    ctx->needs_resize = 0;
+
+    return (int)(p - buf);
 }

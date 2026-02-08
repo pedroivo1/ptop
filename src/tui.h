@@ -67,6 +67,16 @@ extern const char* gradient_temp[16];
 extern const char* gradient_perc[8];
 extern const char* dots_braille[8];
 
+static inline char *tui_at(char *p, int x, int y)
+{
+    p = APPEND_LIT(p, "\033[");
+    p = append_num(p, y);
+    p = APPEND_LIT(p, ";");
+    p = append_num(p, x);
+    p = APPEND_LIT(p, "H");
+    return p;
+}
+
 void tui_setup(char *bg_color, char *font_color);
 void tui_restore();
 void tui_update_size();
@@ -74,16 +84,6 @@ char *tui_draw_box(char *p, int x, int y, int w, int h, char *color);
 char *tui_draw_up_space(char *p, int x, int y, int len);
 char *tui_draw_bottom_space(char *p, int x, int y, int len);
 char *tui_draw_graph(char *p, uint8_t *data, int len, int head);
-
-static inline char *tui_at(char *p, int x, int y)
-{
-    p = append_str(p, "\033[");
-    p = append_num(p, y);
-    p = append_str(p, ";");
-    p = append_num(p, x);
-    p = append_str(p, "H");
-    return p;
-}
 
 extern int term_w;
 extern int term_h;

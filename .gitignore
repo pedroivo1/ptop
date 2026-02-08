@@ -11,3 +11,4 @@ script
 *.o
 *.out
 *.sh
+*.txt
