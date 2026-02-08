@@ -2,7 +2,12 @@
 ptop
 run_tests
 show_colors
-a.out
 
-# --- Object Files ---
+# --- Folders ---
+.vscode
+script
+
+# --- Files ---
 *.o
+*.out
+*.sh

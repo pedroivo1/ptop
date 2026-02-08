@@ -1,18 +1,29 @@
 #ifndef UTILS_H
 #define UTILS_H
 
+#ifndef _GNU_SOURCE
+#define _GNU_SOURCE
+#endif
+
 #include <string.h>
 #include <stdint.h>
 #include <unistd.h>
+#include <time.h>
 
 #define APPEND_LIT(buf, str) (memcpy(buf, str, sizeof(str)-1), buf + sizeof(str)-1)
+
+static inline uint64_t current_time_ms() {
+    struct timespec ts;
+    clock_gettime(CLOCK_MONOTONIC, &ts);
+    return (uint64_t)(ts.tv_sec * 1000 + ts.tv_nsec / 1000000);
+}
 
 static inline uint64_t str_to_uint64(char **p)
 {
     uint64_t val = 0;
     while (**p >= '0' && **p <= '9')
     {
-        val = (val * 10) + (**p - '0');
+        val = (val << 3) + (val << 1) + (**p - '0');
         (*p)++;
     }
     return val;
@@ -41,15 +52,15 @@ static inline uint64_t read_sysfs_uint64(int fd)
     ssize_t bytes_read = pread(fd, buf, sizeof(buf) - 1, 0);
     if (bytes_read > 0)
     {
-        buf[bytes_read] = '\0'; 
-        char *ptr = buf; 
+        buf[bytes_read] = '\0';
+        char *ptr = buf;
 
         val = str_to_uint64(&ptr);
     }
     return val;
 }
 
-static const char g_digits_lut[200] = 
+static const char g_digits_lut[200] =
     "0001020304050607080910111213141516171819"
     "2021222324252627282930313233343536373839"
     "4041424344454647484950515253545556575859"
@@ -64,12 +75,12 @@ static inline char *append_u64_base(char *buf, uint64_t val)
         return buf;
     }
 
-    char temp[24]; 
+    char temp[24];
     char *p = temp + 24;
 
     while (val >= 100)
     {
-        unsigned int index = (val % 100) * 2;
+        unsigned int index = (val % 100) << 1;
         val /= 100;
         p -= 2;
         memcpy(p, &g_digits_lut[index], 2);
@@ -78,7 +89,7 @@ static inline char *append_u64_base(char *buf, uint64_t val)
     if (val < 10) *--p = val + '0';
     else
     {
-        unsigned int index = val * 2;
+        unsigned int index = val << 1;
         p -= 2;
         memcpy(p, &g_digits_lut[index], 2);
     }

@@ -63,12 +63,12 @@ void update_mem_data(MemMon *memmon)
     parse_mem(memmon);
 }
 
-static char *draw_meter(char *p, int x, int y, int w, 
-                        const char *label, const char *color_bar, 
+static char *draw_meter(char *p, int x, int y, int w,
+                        const char *label, const char *color_bar,
                         int perc, uint64_t val_kb)
 {
     int label_w = 12;
-    int value_w = 11; 
+    int value_w = 11;
     int bar_w = w - label_w - value_w;
     if (bar_w < 5) bar_w = 5;
 
@@ -87,13 +87,13 @@ static char *draw_meter(char *p, int x, int y, int w,
     p = APPEND_LIT(p, " ");
 
     int fill = (bar_w * perc) / 100;
-    for (int i = 0; i < fill; i++) *p++ = '|'; 
+    for (int i = 0; i < fill; i++) *p++ = '|';
     p = append_str(p, C_BAR_BG);
     for (int i = fill; i < bar_w; i++) *p++ = '|';
 
     p = append_str(p, C_VALUE);
     p = APPEND_LIT(p, " ");
-    p = append_fixed2(p, val_kb, 20, 100); 
+    p = append_fixed2(p, val_kb, 20, 100);
     if (val_kb < 10485760) p = APPEND_LIT(p, " ");
     p = APPEND_LIT(p, " GiB");
 
