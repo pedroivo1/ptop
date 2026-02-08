@@ -1,13 +1,12 @@
 # ptop
 
-![Language](https://img.shields.io/badge/language-C11-blue)
-![Platform](https://img.shields.io/badge/platform-Linux-black?logo=linux)
-![License](https://img.shields.io/badge/license-GPLv2-blue)
-![Size](https://img.shields.io/badge/size-~50KB-brightgreen)
-![Dependencies](https://img.shields.io/badge/dependencies-zero-brightgreen)
-![Status](https://img.shields.io/badge/status-WIP-orange)
+![Platform](https://img.shields.io/badge/-Linux-black?logo=linux)
+![License](https://img.shields.io/badge/-GPLv2-blue)
+![Status](https://img.shields.io/badge/-WIP-orange)
+![Language](https://img.shields.io/badge/-C11-blue)
+![Usage](https://img.shields.io/badge/Usage-System_resource_monitor-yellow)
 
-Monitor de recursos de "máxima eficiência" em C puro (sem ncurses), focado em performance extrema e estética minimalista. Inspirado no [btop](https://github.com/aristocratos/btop).
+Monitor de recursos feito em C, focado em performance extrema. Inspirado no [btop](https://github.com/aristocratos/btop).
 
 | ptop (WIP) | btop (Original) |
 | :---: | :---: |
@@ -37,7 +36,11 @@ make release
 
 | Tecla | Ação |
 | :---: | :--- |
-| `1` | Alternar CPU |
-| `2` | Alternar Memória |
-| `r` | Forçar Redesenho |
 | `q` | Sair |
+| `1` | Ligar/Desligar CPU |
+| `2` | Ligar/Desligar Memória |
+| `r` | Forçar Redesenho |
+
+## License
+
+[GPLv2](LICENSE)
