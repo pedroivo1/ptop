@@ -10,8 +10,8 @@ DEBUG_FLAGS = -O0 -g -fsanitize=address
 TEST_FLAGS = $(DEBUG_FLAGS) -Isrc -Itest/unity -DUNITY_OUTPUT_COLOR
 
 # --- Files ---
-# SRCS = $(wildcard src/*.c) $(wildcard src/modules/*.c)
-SRCS = src/main.c src/modules/cpu.c src/tui.c
+SRCS = $(wildcard src/*.c) $(wildcard src/modules/*.c)
+# SRCS = src/main.c src/modules/cpu.c src/tui.c
 TEST_SRCS = test/test_utils.c test/unity/unity.c
 COLORS_SRC = test/show_colors.c
 

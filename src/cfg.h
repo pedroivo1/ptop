@@ -14,7 +14,7 @@
 #define STAT_BUFF_LEN (128*CORES_N)
 #define MEM_PATH "/proc/meminfo"
 #define MEM_BUFF_LEN 2048
-#define OUT_BUFF_LEN 8192
+#define OUT_BUFF_LEN 16384
 #define CORE_LABEL_NAME "coretemp"
 #define CORE_LABEL_NAME_N 8
 

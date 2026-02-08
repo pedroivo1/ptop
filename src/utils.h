@@ -24,6 +24,15 @@ static inline void skip_to_digit(char **p)
         (*p)++;
 }
 
+static inline void skip_line(char **p)
+{
+    while (**p && (**p != '\n'))
+        (*p)++;
+
+    if (**p)
+        (*p)++;
+}
+
 static inline uint64_t read_sysfs_uint64(int fd)
 {
     char buf[32];
@@ -102,6 +111,48 @@ static inline char *append_i64_base(char *buf, int64_t val)
     long:               append_i64_base, \
     long long:          append_i64_base  \
 )(buf, val)
+
+static inline char *append_fixed(char *buf, uint64_t val, uint64_t divisor, uint64_t prec_mult)
+{
+    buf = append_u64_base(buf, val / divisor);
+
+    if (prec_mult <= 1) return buf;
+
+    *buf++ = '.';
+
+    uint64_t frac = ((val % divisor) * prec_mult) / divisor;
+    uint64_t check = prec_mult / 10;
+    while (check > 1)
+    {
+        if (frac < check) *buf++ = '0';
+        check /= 10;
+    }
+
+    return append_u64_base(buf, frac);
+}
+
+static inline char *append_fixed2(char *buf, uint64_t val, uint64_t shift, uint64_t prec_mult)
+{
+    buf = append_u64_base(buf, val >> shift);
+
+    if (prec_mult <= 1) return buf;
+
+    *buf++ = '.';
+
+    uint64_t mask = ((uint64_t)1 << shift) - 1;
+    uint64_t remainder = val & mask;
+
+    uint64_t frac = (remainder * prec_mult) >> shift;
+
+    uint64_t check = prec_mult / 10;
+    while (check > 1)
+    {
+        if (frac < check) *buf++ = '0';
+        check /= 10;
+    }
+
+    return append_u64_base(buf, frac);
+}
 
 static inline char *append_str(char *buf, const char *str)
 {

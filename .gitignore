@@ -2,6 +2,7 @@
 ptop
 run_tests
 show_colors
+a.out
 
 # --- Object Files ---
 *.o

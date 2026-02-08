@@ -25,13 +25,13 @@ typedef struct
     uint8_t graph_head;
     uint8_t graph_hist[CORES_N][GRAPH_WIDTH];
 
-} CpuMonitor;
+} CpuMon;
 
-void init_cpumon(CpuMonitor *cpumon);
-void cleanup_cpumon(CpuMonitor *cpumon);
-int get_coretemp_id();
-void update_cpu_metrics(CpuMonitor *cpumon);
-char *render_static_interface(char *p, int x, int y, int w, int h);
-char *render_interface(CpuMonitor* cpumon, char *p, int x, int y, int w, int h);
+void init_cpu(CpuMon *cpumon);
+void deinit_cpu(CpuMon *cpumon);
+void update_cpu_data(CpuMon *cpumon);
+
+char *draw_cpu_ui(char *p, int x, int y, int w, int h);
+char *draw_cpu_data(CpuMon* cpumon, char *p, int x, int y, int w, int h);
 
 #endif
