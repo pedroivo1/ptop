@@ -55,7 +55,7 @@ int main()
         int time_to_wait = DELAY_MS - time_spent;
         if (time_to_wait < 0) time_to_wait = 0;
 
-        handle_input(&ctx, time_to_wait);
+        app_handle_input(&ctx, time_to_wait);
     }
 
     app_destroy(&ctx);

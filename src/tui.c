@@ -65,28 +65,28 @@ char *tui_draw_box(char *p, int x, int y, int w, int h, char *color)
     p = append_str(p, color);
 
     p = tui_at(p, x, y);
-    p = APPEND_LIT(p, BOX_TL);
+    APPEND_LIT(&p, BOX_TL);
     for (int i = 0; i < w - 2; i++)
-        p = APPEND_LIT(p, BOX_H);
-    p = APPEND_LIT(p, BOX_TR);
+        APPEND_LIT(&p, BOX_H);
+    APPEND_LIT(&p, BOX_TR);
 
     for (int i = 0; i < h - 2; i++)
     {
         p = tui_at(p, x+w-1, y+1+i);
-        p = APPEND_LIT(p, BOX_V);
+        APPEND_LIT(&p, BOX_V);
     }
 
     for (int i = 0; i < h - 2; i++)
     {
         p = tui_at(p, x, y+1+i);
-        p = APPEND_LIT(p, BOX_V);
+        APPEND_LIT(&p, BOX_V);
     }
 
     p = tui_at(p, x, y+h-1);
-    p = APPEND_LIT(p, BOX_BL);
+    APPEND_LIT(&p, BOX_BL);
     for (int i = 0; i < w - 2; i++)
-        p = APPEND_LIT(p, BOX_H);
-    p = APPEND_LIT(p, BOX_BR);
+        APPEND_LIT(&p, BOX_H);
+    APPEND_LIT(&p, BOX_BR);
 
     return p;
 }
@@ -94,10 +94,10 @@ char *tui_draw_box(char *p, int x, int y, int w, int h, char *color)
 char *tui_draw_up_space(char *p, int x, int y, int len)
 {
     p = tui_at(p, x, y);
-    p = APPEND_LIT(p, BOX_TR);
+    APPEND_LIT(&p, BOX_TR);
     for (int i = 0; i < len; i++)
-        p = APPEND_LIT(p, " ");
-    p = APPEND_LIT(p, BOX_TL);
+        APPEND_LIT(&p, " ");
+    APPEND_LIT(&p, BOX_TL);
 
     return p;
 }
@@ -105,10 +105,10 @@ char *tui_draw_up_space(char *p, int x, int y, int len)
 char *tui_draw_bottom_space(char *p, int x, int y, int len)
 {
     p = tui_at(p, x, y);
-    p = APPEND_LIT(p, BOX_BR);
+    APPEND_LIT(&p, BOX_BR);
     for (int i = 0; i < len; i++)
-        p = APPEND_LIT(p, " ");
-    p = APPEND_LIT(p, BOX_BL);
+        APPEND_LIT(&p, " ");
+    APPEND_LIT(&p, BOX_BL);
 
     return p;
 }
@@ -124,7 +124,7 @@ char *tui_draw_graph(char *p, uint8_t *data, int len, int head)
         if (val > 0) {
             p = append_str(p, gradient_perc[dot_idx]);
         } else {
-            p = APPEND_LIT(p, "\033[38;5;236m");
+            APPEND_LIT(&p, "\033[38;5;236m");
         }
 
         p = append_str(p, dots_braille[dot_idx]);
@@ -157,7 +157,7 @@ char *tui_begin_frame(char *p, int *resized)
     if (win_resized)
     {
         tui_update_size();
-        p = APPEND_LIT(p, "\033[2J");
+        APPEND_LIT(&p, "\033[2J");
         win_resized = 0;
         if (resized) *resized = 1;
     }

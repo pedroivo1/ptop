@@ -73,15 +73,15 @@ static char *draw_meter(char *p, int x, int y, int w, const char *label, const c
 
     p = append_str(p, C_LABEL);
     p = append_str(p, label);
-    p = APPEND_LIT(p, ":");
+    APPEND_LIT(&p, ":");
 
-    if (perc < 100) p = APPEND_LIT(p, " ");
-    if (perc < 10)  p = APPEND_LIT(p, " ");
+    if (perc < 100) APPEND_LIT(&p, " ");
+    if (perc < 10)  APPEND_LIT(&p, " ");
 
     p = append_str(p, color_bar);
-    p = append_num(p, perc);
-    p = APPEND_LIT(p, "%");
-    p = APPEND_LIT(p, " ");
+    append_num(&p, perc);
+    APPEND_LIT(&p, "%");
+    APPEND_LIT(&p, " ");
 
     int fill = (bar_w * perc) / 100;
     for (int i = 0; i < fill; i++) *p++ = '|';
@@ -89,10 +89,10 @@ static char *draw_meter(char *p, int x, int y, int w, const char *label, const c
     for (int i = fill; i < bar_w; i++) *p++ = '|';
 
     p = append_str(p, C_VALUE);
-    p = APPEND_LIT(p, " ");
+    APPEND_LIT(&p, " ");
     p = append_fixed2(p, val_kb, 20, 100);
-    if (val_kb < 10485760) p = APPEND_LIT(p, " ");
-    p = APPEND_LIT(p, " GiB");
+    if (val_kb < 10485760) APPEND_LIT(&p, " ");
+    APPEND_LIT(&p, " GiB");
 
     return p;
 }

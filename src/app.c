@@ -60,7 +60,7 @@ void update_layout(AppContext *ctx)
     ctx->needs_resize = 0;
 }
 
-void handle_input(AppContext *ctx, int timeout_ms)
+void app_handle_input(AppContext *ctx, int timeout_ms)
 {
     if (g_signal_quit)
     {

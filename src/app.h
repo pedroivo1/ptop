@@ -31,7 +31,7 @@ typedef struct {
 void app_init(AppContext *ctx);
 void app_destroy(AppContext *ctx);
 void update_layout(AppContext *ctx);
-void handle_input(AppContext *ctx, int timeout_ms);
+void app_handle_input(AppContext *ctx, int timeout_ms);
 
 void app_update_state(AppContext *ctx);
 int app_render_frame(AppContext *ctx, char *buffer);

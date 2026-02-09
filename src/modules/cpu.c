@@ -17,9 +17,9 @@ int get_coretemp_cpu_id()
     for (size_t i = 0; i < HWMON_N; i++)
     {
         p = path;
-        p = APPEND_LIT(p, "/sys/class/hwmon/hwmon");
-        p = append_num(p, i);
-        p = APPEND_LIT(p, "/name");
+        APPEND_LIT(&p, "/sys/class/hwmon/hwmon");
+        append_num(&p, i);
+        APPEND_LIT(&p, "/name");
         *p = '\0';
         int fd = open(path, O_RDONLY);
         ssize_t bytes_read = read(fd, buf, sizeof(buf));
@@ -47,20 +47,20 @@ void init_cpu(CpuMon *cpumon)
     int hwmon_cpu_id = get_coretemp_cpu_id();
     char path[64];
     char *p = path;
-    p = APPEND_LIT(p, "/sys/class/hwmon/hwmon");
-    p = append_num(p, hwmon_cpu_id);
-    p = APPEND_LIT(p, "/temp");
-    p = append_num(p, 1);
-    p = APPEND_LIT(p, "_input");
+    APPEND_LIT(&p, "/sys/class/hwmon/hwmon");
+    append_num(&p, hwmon_cpu_id);
+    APPEND_LIT(&p, "/temp");
+    append_num(&p, 1);
+    APPEND_LIT(&p, "_input");
     *p = '\0';
     cpumon->fd_temp = open(path, O_RDONLY);
 
     for (size_t i = 0; i < PHY_CORES_N; i++)
     {
         p = path;
-        p = APPEND_LIT(p, "/sys/devices/system/cpu/cpu");
-        p = append_num(p, i);
-        p = APPEND_LIT(p, "/cpufreq/scaling_cur_freq");
+        APPEND_LIT(&p, "/sys/devices/system/cpu/cpu");
+        append_num(&p, i);
+        APPEND_LIT(&p, "/cpufreq/scaling_cur_freq");
         *p = '\0';
         cpumon->fd_freq[i] = open(path, O_RDONLY);
     }
@@ -182,44 +182,44 @@ void update_cpu_data(CpuMon *cpumon)
 static inline char *draw_temp_ui(char *p, int x, int y)
 {
     p = tui_at(p, x, y);
-    p = APPEND_LIT(p, "  ");
-    p = APPEND_LIT(p, "°C");
+    APPEND_LIT(&p, "  ");
+    APPEND_LIT(&p, "°C");
     return p;
 }
 
 static inline char *draw_temp_data(char *p, int x, int y, int temp)
 {
     p = tui_at(p, x, y);
-    p = APPEND_LIT(p, BOLD);
+    APPEND_LIT(&p, BOLD);
     p = append_str(p, gradient_temp[(temp + 128) >> 4]);
-    p = append_num(p, temp);
-    p = APPEND_LIT(p, WHITE NOBOLD);
+    append_num(&p, temp);
+    APPEND_LIT(&p, WHITE NOBOLD);
     return p;
 }
 
 static inline char *draw_freq_ui(char *p, int x, int y)
 {
     p = tui_at(p, x, y);
-    p = APPEND_LIT(p, "   ");
-    p = APPEND_LIT(p, " GHz");
+    APPEND_LIT(&p, "   ");
+    APPEND_LIT(&p, " GHz");
     return p;
 }
 
 static inline char *draw_freq_data(char *p, int x, int y, int mhz)
 {
     p = tui_at(p, x, y);
-    p = APPEND_LIT(p, BOLD);
+    APPEND_LIT(&p, BOLD);
     p = append_fixed(p, mhz, 1000, 10);
-    p = APPEND_LIT(p, NOBOLD);
+    APPEND_LIT(&p, NOBOLD);
     return p;
 }
 
 static inline char *draw_label_ui(char *p, int id)
 {
-    p = APPEND_LIT(p, BOLD);
-    p = APPEND_LIT(p, "C");
-    p = append_num(p, id);
-    p = APPEND_LIT(p, NOBOLD);
+    APPEND_LIT(&p, BOLD);
+    APPEND_LIT(&p, "C");
+    append_num(&p, id);
+    APPEND_LIT(&p, NOBOLD);
     *p++ = ' ';
     if (id < 10) *p++ = ' ';
     return p;
@@ -229,30 +229,30 @@ static inline char *draw_usage_ui(char *p)
 {
     for (int i = 0; i < GRAPH_WIDTH; i++)
     {
-        p = APPEND_LIT(p, " ");
+        APPEND_LIT(&p, " ");
     }
-    p = APPEND_LIT(p, "    ");
-    p = APPEND_LIT(p, "%");
+    APPEND_LIT(&p, "    ");
+    APPEND_LIT(&p, "%");
     return p;
 }
 
 static inline char *draw_usage_data(char *p, int usage)
 {
-    p = APPEND_LIT(p, " ");
+    APPEND_LIT(&p, " ");
     if (usage)
         p = append_str(p, gradient_perc[(usage >> 4) & 7]);
     else
-        p = APPEND_LIT(p, GRAY);
+        APPEND_LIT(&p, GRAY);
     if (usage < 10) *p++ = ' ';
     if (usage < 100) *p++ = ' ';
-    p = append_num(p, usage);
+    append_num(&p, usage);
     return p;
 }
 
 static inline char *draw_load_avg_ui(char *p, int x, int y)
 {
     p = tui_at(p, x, y);
-    p = APPEND_LIT(p, "AVG: ");
+    APPEND_LIT(&p, "AVG: ");
 
     return p;
 }
@@ -268,9 +268,9 @@ static inline char *draw_load_avg_data(char *p, int x, int y, uint32_t avg[3])
 
         p = append_str(p, gradient_perc[l_idx]);
         p = append_fixed(p, raw, 65536, 100);
-        if (k < 2) p = APPEND_LIT(p, "  ");
+        if (k < 2) APPEND_LIT(&p, "  ");
     }
-    p = APPEND_LIT(p, WHITE);
+    APPEND_LIT(&p, WHITE);
 
     return p;
 }
@@ -278,7 +278,7 @@ static inline char *draw_load_avg_data(char *p, int x, int y, uint32_t avg[3])
 static inline char *draw_uptime_ui(char *p, int x, int y)
 {
     p = tui_at(p, x, y);
-    p = APPEND_LIT(p, "up ");
+    APPEND_LIT(&p, "up ");
     return p;
 }
 
@@ -289,14 +289,14 @@ static inline char *draw_uptime_data(char *p, int x, int y, int uptime)
     int hours = up / 3600;
     int mins = (up % 3600) / 60;
     int secs = up % 60;
-    if  (hours < 10) p = APPEND_LIT(p, "0");
-    p = append_num(p, hours);
-    p = APPEND_LIT(p, ":");
-    if (mins < 10) p = APPEND_LIT(p, "0");
-    p = append_num(p, mins);
-    p = APPEND_LIT(p, ":");
-    if (secs < 10) p = APPEND_LIT(p, "0");
-    p = append_num(p, secs);
+    if  (hours < 10) APPEND_LIT(&p, "0");
+    append_num(&p, hours);
+    APPEND_LIT(&p, ":");
+    if (mins < 10) APPEND_LIT(&p, "0");
+    append_num(&p, mins);
+    APPEND_LIT(&p, ":");
+    if (secs < 10) APPEND_LIT(&p, "0");
+    append_num(&p, secs);
     return p;
 }
 
@@ -315,7 +315,7 @@ char *draw_cpu_ui(char *p, int x, int y, int w, int h)
     p = tui_draw_up_space(p, table_x + 12, table_y, 7);
     p = tui_draw_bottom_space(p, table_x + 4, table_y + table_h - 1, 21);
 
-    p = APPEND_LIT(p, WHITE);
+    APPEND_LIT(&p, WHITE);
     p = draw_temp_ui(p, table_x + 5, table_y);
     p = draw_freq_ui(p, table_x + 13, table_y);
     p = draw_load_avg_ui(p, table_x + 5, table_y + table_h - 1);
@@ -352,7 +352,7 @@ char *draw_cpu_data(CpuMon* cpumon, char *p, int x, int y, int w, int h)
         p = draw_usage_data(p, cpumon->usage[i]);
     }
 
-    p = APPEND_LIT(p, WHITE);
+    APPEND_LIT(&p, WHITE);
     p = draw_uptime_data(p, x + 5, y + h - 2, cpumon->uptime);
 
     return p;

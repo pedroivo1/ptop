@@ -5,7 +5,7 @@
 #include "utils.h"
 
 // --- COLORS ---
-#define BG_BLACK    "\033[48;5;234m"
+#define BG_BLACK    "\033[48;5;233m"
 #define GRAY        "\033[38;5;245m"
 #define WHITE       "\033[38;5;253m"
 #define PRESET      "\033[0m" BG_BLACK WHITE
@@ -69,11 +69,11 @@ extern const char* dots_braille[8];
 
 static inline char *tui_at(char *p, int x, int y)
 {
-    p = APPEND_LIT(p, "\033[");
-    p = append_num(p, y);
-    p = APPEND_LIT(p, ";");
-    p = append_num(p, x);
-    p = APPEND_LIT(p, "H");
+    APPEND_LIT(&p, "\033[");
+    append_num(&p, y);
+    APPEND_LIT(&p, ";");
+    append_num(&p, x);
+    APPEND_LIT(&p, "H");
     return p;
 }
 

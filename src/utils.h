@@ -10,7 +10,7 @@
 #include <unistd.h>
 #include <time.h>
 
-#define APPEND_LIT(buf, str) (memcpy(buf, str, sizeof(str)-1), buf + sizeof(str)-1)
+#define APPEND_LIT(buf, str) ((void)(memcpy(*buf, str, sizeof(str) - 1), *buf += sizeof(str) - 1))
 
 static inline uint64_t current_time_ms() {
     struct timespec ts;
@@ -67,12 +67,12 @@ static const char g_digits_lut[200] =
     "6061626364656667686970717273747576777879"
     "8081828384858687888990919293949596979899";
 
-static inline char *append_u64_base(char *buf, uint64_t val)
+static inline void append_u64_base(char **buf, uint64_t val)
 {
     if (val == 0)
     {
-        *buf++ = '0';
-        return buf;
+        *(*buf)++ = '0';
+        return;
     }
 
     char temp[24];
@@ -95,18 +95,22 @@ static inline char *append_u64_base(char *buf, uint64_t val)
     }
 
     size_t len = (temp + 24) - p;
-    memcpy(buf, p, len);
-    return buf + len;
+    memcpy(*buf, p, len);
+    *buf += len;
 }
 
-static inline char *append_i64_base(char *buf, int64_t val)
+static inline void append_i64_base(char **buf, int64_t val)
 {
     if (val < 0)
     {
-        *buf++ = '-';
-        return append_u64_base(buf, (uint64_t)-(val));
+        *(*buf)++ = '-';
+        
+        append_u64_base(buf, -(uint64_t)val);
     }
-    return append_u64_base(buf, (uint64_t)val);
+    else
+    {
+        append_u64_base(buf, (uint64_t)val);
+    }
 }
 
 #define append_num(buf, val) _Generic((val), \
@@ -116,6 +120,7 @@ static inline char *append_i64_base(char *buf, int64_t val)
     unsigned int:       append_u64_base, \
     unsigned long:      append_u64_base, \
     unsigned long long: append_u64_base, \
+    char:               append_i64_base, \
     signed char:        append_i64_base, \
     short:              append_i64_base, \
     int:                append_i64_base, \
@@ -125,7 +130,7 @@ static inline char *append_i64_base(char *buf, int64_t val)
 
 static inline char *append_fixed(char *buf, uint64_t val, uint64_t divisor, uint64_t prec_mult)
 {
-    buf = append_u64_base(buf, val / divisor);
+    append_u64_base(&buf, val / divisor);
 
     if (prec_mult <= 1) return buf;
 
@@ -139,12 +144,13 @@ static inline char *append_fixed(char *buf, uint64_t val, uint64_t divisor, uint
         check /= 10;
     }
 
-    return append_u64_base(buf, frac);
+    append_u64_base(&buf, frac);
+    return buf;
 }
 
 static inline char *append_fixed2(char *buf, uint64_t val, uint64_t shift, uint64_t prec_mult)
 {
-    buf = append_u64_base(buf, val >> shift);
+    append_u64_base(&buf, val >> shift);
 
     if (prec_mult <= 1) return buf;
 
@@ -162,7 +168,8 @@ static inline char *append_fixed2(char *buf, uint64_t val, uint64_t shift, uint6
         check /= 10;
     }
 
-    return append_u64_base(buf, frac);
+    append_u64_base(&buf, frac);
+    return buf;
 }
 
 static inline char *append_str(char *buf, const char *str)
