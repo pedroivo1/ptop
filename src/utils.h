@@ -130,21 +130,25 @@ static inline void append_i64_base(char **buf, int64_t val)
 
 static inline char *append_fixed(char *buf, uint64_t val, uint64_t divisor, uint64_t prec_mult)
 {
+    // 1. Parte Inteira
     append_u64_base(&buf, val / divisor);
 
     if (prec_mult <= 1) return buf;
 
     *buf++ = '.';
 
-    uint64_t frac = ((val % divisor) * prec_mult) / divisor;
-    uint64_t check = prec_mult / 10;
-    while (check > 1)
+    uint64_t remainder = val % divisor;
+
+    while (prec_mult > 1)
     {
-        if (frac < check) *buf++ = '0';
-        check /= 10;
+        prec_mult /= 10;
+        remainder *= 10;
+        uint64_t digit = remainder / divisor;
+        remainder %= divisor;
+        
+        *buf++ = (char)('0' + digit);
     }
 
-    append_u64_base(&buf, frac);
     return buf;
 }
 
