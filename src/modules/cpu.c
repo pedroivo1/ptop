@@ -4,6 +4,7 @@
 #include <string.h>
 #include <sys/sysinfo.h>
 #include <stdalign.h>
+#include <stdlib.h>
 #include "cpu.h"
 #include "../utils.h"
 #include "../tui.h"
@@ -42,6 +43,16 @@ void init_cpu(CpuMon *cpumon)
 {
     memset(cpumon, 0, sizeof(*cpumon));
 
+    cpumon->core_count = get_nprocs();
+    if (cpumon->core_count <= 0) cpumon->core_count = 1;
+
+    cpumon->prev_total = calloc(cpumon->core_count, sizeof(*cpumon->prev_total));
+    cpumon->prev_idle = calloc(cpumon->core_count, sizeof(*cpumon->prev_idle));
+    cpumon->usage = calloc(cpumon->core_count, sizeof(*cpumon->usage));
+    cpumon->fd_freq = calloc(cpumon->core_count, sizeof(*cpumon->fd_freq)); // mon->core_count / 2
+
+    cpumon->graph_hist = calloc(cpumon->core_count * GRAPH_WIDTH, sizeof(uint8_t));
+
     cpumon->fd_stat = open(STAT_PATH, O_RDONLY);
 
     int hwmon_cpu_id = get_coretemp_cpu_id();
@@ -55,7 +66,7 @@ void init_cpu(CpuMon *cpumon)
     *p = '\0';
     cpumon->fd_temp = open(path, O_RDONLY);
 
-    for (size_t i = 0; i < PHY_CORES_N; i++)
+    for (size_t i = 0; i < cpumon->core_count; i++) // mon->core_count / 2
     {
         p = path;
         APPEND_LIT(&p, "/sys/devices/system/cpu/cpu");
@@ -70,8 +81,14 @@ void deinit_cpu(CpuMon *cpumon)
 {
     close(cpumon->fd_stat);
     close(cpumon->fd_temp);
-    for (int i = 0; i < PHY_CORES_N; i++)
+    for (int i = 0; i < cpumon->core_count; i++) // mon->core_count / 2
         close(cpumon->fd_freq[i]);
+
+    free(cpumon->fd_freq);
+    free(cpumon->prev_total);
+    free(cpumon->prev_idle);
+    free(cpumon->usage);
+    free(cpumon->graph_hist);
 }
 
 static void get_temp_c(CpuMon *cpumon)
@@ -79,63 +96,74 @@ static void get_temp_c(CpuMon *cpumon)
     cpumon->temp = read_sysfs_uint64(cpumon->fd_temp) / 1000;
 }
 
+
 static void get_freq_mhz(CpuMon *cpumon)
 {
-    int total = 0;
-    for (int i = 0; i < PHY_CORES_N; i++)
-        total += read_sysfs_uint64(cpumon->fd_freq[i]);
+    uint64_t total = 0;
+    int valid_readings = 0;
 
-    cpumon->freq = total / (1000 * PHY_CORES_N);
+    for (int i = 0; i < cpumon->core_count; i++) // mon->core_count / 2
+    {
+        if (cpumon->fd_freq[i] > 0) {
+            uint64_t val = read_sysfs_uint64(cpumon->fd_freq[i]);
+            if (val > 0) {
+                total += val;
+                valid_readings++;
+            }
+        }
+    }
+
+    if (valid_readings > 0)
+        cpumon->freq = total / (1000 * valid_readings);
+    else
+        cpumon->freq = 0;
 }
 
 static void parse_stats(CpuMon* cpumon)
 {
-    char buf[STAT_BUFF_LEN];
+    char buf[16384]; 
+    
     ssize_t bytes_read = pread(cpumon->fd_stat, buf, sizeof(buf) - 1, 0);
     if (bytes_read < 0) return;
+    
+    buf[bytes_read] = '\0';
 
     char *p = buf;
-    while (*p && *p != '\n') p++;
-    if (*p == '\n') p++;
-    for (size_t cpu_id = 0; cpu_id < CORES_N; cpu_id++)
+    
+    skip_line(&p);
+
+    for (size_t cpu_id = 0; cpu_id < cpumon->core_count; cpu_id++)
     {
-        if (p[0] != 'c' || p[1] != 'p' || p[2] != 'u') break;
-        p += 4;
-        if (*p >= '0' && *p <= '9') p++;
-        p++;
+        if (strncmp(p, "cpu", 3) != 0) break;
+
+        skip_to_digit(&p);
+        str_to_uint64(&p);
 
         uint64_t active = 0;
         uint64_t total_idle = 0;
-        uint64_t val;
+
         // USER, NICE, SYSTEM
         for (int k=0; k<3; k++)
         {
-            val = 0;
-            while (*p >= '0') val = (val * 10) + (*p++ - '0');
-            active += val;
-            while (*p == ' ') p++;
+            skip_to_digit(&p);
+            active += str_to_uint64(&p);
         }
 
         // IDLE, IOWAIT
         for (int k=0; k<2; k++)
         {
-            val = 0;
-            while (*p >= '0') val = (val * 10) + (*p++ - '0');
-            total_idle += val;
-            while (*p == ' ') p++;
+            skip_to_digit(&p);
+            total_idle += str_to_uint64(&p);
         }
 
         // IRQ, SOFTIRQ, STEAL
         for (int k=0; k<3; k++)
         {
-            val = 0;
-            while (*p >= '0') val = (val * 10) + (*p++ - '0');
-            active += val;
-            while (*p == ' ') p++;
+            skip_to_digit(&p);
+            active += str_to_uint64(&p);
         }
 
-        while (*p && *p != '\n') p++;
-        if (*p == '\n') p++;
+        skip_line(&p);
 
         uint64_t total = active + total_idle;
         uint64_t diff_total = total - cpumon->prev_total[cpu_id];
@@ -150,7 +178,9 @@ static void parse_stats(CpuMon* cpumon)
         cpumon->usage[cpu_id] = current_usage;
         cpumon->prev_total[cpu_id] = total;
         cpumon->prev_idle[cpu_id] = total_idle;
-        cpumon->graph_hist[cpu_id][cpumon->graph_head] = current_usage;
+        
+        int idx = (cpu_id * GRAPH_WIDTH) + cpumon->graph_head;
+        cpumon->graph_hist[idx] = current_usage;
     }
     cpumon->graph_head = (cpumon->graph_head + 1) % GRAPH_WIDTH;
 }
@@ -186,7 +216,7 @@ void cpu_recalc(CpuMon *cpumon)
         table_w = cpumon->rect.w/2;
     if (table_w < 32 - 21 + 7)
         table_w = 11;
-    int table_h = CORES_N + 2;
+    int table_h = cpumon->core_count + 2;
 
     int table_x = cpumon->rect.x + cpumon->rect.w - table_w - 1;
 
@@ -339,7 +369,7 @@ char *draw_cpu_ui(CpuMon *cpumon, char *p)
     APPEND_LIT(&p, WHITE);
     p = draw_temp_ui(p, rt.x + 3, rt.y);
     p = draw_freq_ui(p, rt.x + 10, rt.y);
-    for (int i = 0; i < CORES_N; i++)
+    for (int i = 0; i < cpumon->core_count; i++)
     {
         int row = rt.y + i + 1;
         p = tui_at(p, rt.x + 1, row);
@@ -362,13 +392,15 @@ char *draw_cpu_data(CpuMon* cpumon, char *p)
     // --- TABLE METRICS ---
     p = draw_temp_data(p, rt.x + 3, rt.y, cpumon->temp);
     p = draw_freq_data(p, rt.x + 10, rt.y, cpumon->freq);
-    for (int i = 0; i < CORES_N; i++)
+    for (int i = 0; i < cpumon->core_count; i++)
     {
         int row = rt.y + i + 1;
         p = tui_at(p, rt.x + 5, row);
 
         int width = rt.w - 11;
-        p = tui_draw_graph(p, cpumon->graph_hist[i], width, cpumon->graph_head);
+
+        uint8_t *core_hist_ptr = &cpumon->graph_hist[i * GRAPH_WIDTH];
+        p = tui_draw_graph(p, core_hist_ptr, width, cpumon->graph_head);
         p = draw_usage_data(p, cpumon->usage[i]);
     }
 

@@ -9,25 +9,28 @@
 
 typedef struct
 {
-    uint64_t prev_total[CORES_N];
-    uint64_t prev_idle[CORES_N];
+    uint64_t *prev_total;
+    uint64_t *prev_idle;
+
+    int *fd_freq;
+
+    uint8_t *usage;
+    uint8_t *graph_hist;
 
     uint32_t uptime;
     uint32_t load_avg[3];
 
     int fd_stat;
     int fd_temp;
-    int fd_freq[PHY_CORES_N];
 
     uint16_t freq;
+    uint16_t core_count;
 
     Rect rect;
     Rect r_table;
 
-    uint8_t usage[CORES_N];
     int8_t temp;
     uint8_t graph_head;
-    uint8_t graph_hist[CORES_N][GRAPH_WIDTH];
 
 } CpuMon;
 

@@ -3,6 +3,7 @@
 #include <signal.h>
 #include <stdalign.h>
 #include <time.h>
+#include <stdlib.h>
 
 #include "app.h"
 #include "utils.h"
@@ -26,7 +27,10 @@ int main()
 
     tui_setup(BG_BLACK, WHITE);
     
-    static alignas(64) char buf[OUT_BUFF_LEN];
+    size_t buf_len = OUT_BUFF_LEN;
+    char *buf = malloc(buf_len);
+
+    if (!buf) return 1; 
 
     uint64_t last_update_time = 0;
     uint64_t now;
@@ -58,6 +62,7 @@ int main()
         app_handle_input(&ctx, time_to_wait);
     }
 
+    free(buf);
     app_destroy(&ctx);
     tui_restore();
     return 0;
