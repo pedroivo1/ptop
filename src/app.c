@@ -36,24 +36,29 @@ void update_layout(AppContext *ctx)
     int h = term_h;
     int margin = 1;
 
-    ctx->r_cpu = (Rect){0, 0, 0, 0};
-    ctx->r_mem = (Rect){0, 0, 0, 0};
+    ctx->cpu.rect = (Rect){0, 0, 0, 0};
+    ctx->mem.rect = (Rect){0, 0, 0, 0};
 
     if (ctx->show_cpu && ctx->show_mem)
     {
         int split_h = h - 7;
         if (split_h < 10) split_h = h / 2;
 
-        ctx->r_cpu = (Rect){margin, margin, w, split_h};
-        ctx->r_mem = (Rect){margin, margin + split_h, w, h - split_h};
+        ctx->cpu.rect = (Rect){margin, margin, w, split_h};
+        ctx->mem.rect = (Rect){margin, margin + split_h, w, h - split_h};
     }
     else if (ctx->show_cpu && !ctx->show_mem)
     {
-        ctx->r_cpu = (Rect){margin, margin, w, h};
+        ctx->cpu.rect = (Rect){margin, margin, w, h};
     }
     else if (!ctx->show_cpu && ctx->show_mem)
     {
-        ctx->r_mem = (Rect){margin, margin, w, h};
+        ctx->mem.rect = (Rect){margin, margin, w, h};
+    }
+
+    if (ctx->show_cpu)
+    {
+        cpu_recalc(&ctx->cpu);
     }
 
     ctx->force_redraw = 1;
@@ -128,10 +133,10 @@ void app_update_state(AppContext *ctx)
 int app_render_frame(AppContext *ctx, char *buf)
 {
     char *p = buf;
-    
+
     int physical_resize = 0;
     p = tui_begin_frame(p, &physical_resize);
-    
+
     if (physical_resize) {
         ctx->needs_resize = 1;
         update_layout(ctx);
@@ -146,17 +151,17 @@ int app_render_frame(AppContext *ctx, char *buf)
     if (ctx->show_cpu)
     {
         if (draw_static)
-            p = draw_cpu_ui(p, ctx->r_cpu.x, ctx->r_cpu.y, ctx->r_cpu.w, ctx->r_cpu.h);
+            p = draw_cpu_ui(&ctx->cpu, p);
 
-        p = draw_cpu_data(&ctx->cpu, p, ctx->r_cpu.x, ctx->r_cpu.y, ctx->r_cpu.w, ctx->r_cpu.h);
+        p = draw_cpu_data(&ctx->cpu, p);
     }
 
     if (ctx->show_mem)
     {
         if (draw_static)
-            p = draw_mem_ui(p, ctx->r_mem.x, ctx->r_mem.y, ctx->r_mem.w, ctx->r_mem.h);
+            p = draw_mem_ui(&ctx->mem, p);
 
-        p = draw_mem_data(&ctx->mem, p, ctx->r_mem.x, ctx->r_mem.y, ctx->r_mem.w, ctx->r_mem.h);
+        p = draw_mem_data(&ctx->mem, p);
     }
 
     ctx->force_redraw = 0;

@@ -179,6 +179,27 @@ void update_cpu_data(CpuMon *cpumon)
 // =============================================================================
 // ================================== DISPLAY ==================================
 // =============================================================================
+void cpu_recalc(CpuMon *cpumon)
+{
+    int table_w = 32;
+    if (table_w * 2 > cpumon->rect.w)
+        table_w = cpumon->rect.w/2;
+    if (table_w < 32 - 21 + 7)
+        table_w = 11;
+    int table_h = CORES_N + 2;
+
+    int table_x = cpumon->rect.x + cpumon->rect.w - table_w - 1;
+
+    int table_y = cpumon->rect.y + ((cpumon->rect.h - table_h) >> 1);
+
+    cpumon->r_table = (Rect){
+        .x = (uint16_t)table_x,
+        .y = (uint16_t)table_y,
+        .w = (uint16_t)table_w,
+        .h = (uint16_t)table_h
+    };
+}
+
 static inline char *draw_temp_ui(char *p, int x, int y)
 {
     p = tui_at(p, x, y);
@@ -225,9 +246,9 @@ static inline char *draw_label_ui(char *p, int id)
     return p;
 }
 
-static inline char *draw_usage_ui(char *p)
+static inline char *draw_usage_ui(char *p, int width)
 {
-    for (int i = 0; i < GRAPH_WIDTH; i++)
+    for (int i = 0; i < width; i++)
     {
         APPEND_LIT(&p, " ");
     }
@@ -252,7 +273,7 @@ static inline char *draw_usage_data(char *p, int usage)
 static inline char *draw_load_avg_ui(char *p, int x, int y)
 {
     p = tui_at(p, x, y);
-    APPEND_LIT(&p, "AVG: ");
+    APPEND_LIT(&p, "AVG ");
 
     return p;
 }
@@ -268,7 +289,7 @@ static inline char *draw_load_avg_data(char *p, int x, int y, uint32_t avg[3])
 
         p = append_str(p, gradient_perc[l_idx]);
         p = append_fixed(p, raw, 65536, 100);
-        if (k < 2) APPEND_LIT(&p, "  ");
+        if (k < 2) APPEND_LIT(&p, " ");
     }
     APPEND_LIT(&p, WHITE);
 
@@ -300,60 +321,61 @@ static inline char *draw_uptime_data(char *p, int x, int y, int uptime)
     return p;
 }
 
-char *draw_cpu_ui(char *p, int x, int y, int w, int h)
+char *draw_cpu_ui(CpuMon *cpumon, char *p)
 {
+    Rect r = cpumon->rect;
+    Rect rt = cpumon->r_table;
+
     // --- MAIN BOX ---
-    p = tui_draw_box(p, x, y, w, h, CPU_BORDER_C);
+    p = tui_draw_box(p, r.x, r.y, r.w, r.h, CPU_BORDER_C);
 
     // --- TABLE BOX ---
-    int table_w = 32;
-    int table_x = x + w - table_w - 1;
-    int table_h = CORES_N + 2;
-    int table_y = y + ((h - table_h) >> 1);
-    p = tui_draw_box(p, table_x, table_y, table_w, table_h, GRAY);
-    p = tui_draw_up_space(p, table_x + 4, table_y, 4);
-    p = tui_draw_up_space(p, table_x + 12, table_y, 7);
-    p = tui_draw_bottom_space(p, table_x + 4, table_y + table_h - 1, 21);
+    p = tui_draw_box(p, rt.x, rt.y, rt.w, rt.h, GRAY);
+
+    // --- TABLE UI ---
+    p = tui_draw_up_space(p, rt.x + 2, rt.y, 4);
+    p = tui_draw_up_space(p, rt.x + 9, rt.y, 7);
 
     APPEND_LIT(&p, WHITE);
-    p = draw_temp_ui(p, table_x + 5, table_y);
-    p = draw_freq_ui(p, table_x + 13, table_y);
-    p = draw_load_avg_ui(p, table_x + 5, table_y + table_h - 1);
+    p = draw_temp_ui(p, rt.x + 3, rt.y);
+    p = draw_freq_ui(p, rt.x + 10, rt.y);
     for (int i = 0; i < CORES_N; i++)
     {
-        int row = table_y + i + 1;
-        p = tui_at(p, table_x + 1, row);
+        int row = rt.y + i + 1;
+        p = tui_at(p, rt.x + 1, row);
         p = draw_label_ui(p, i);
-        p = draw_usage_ui(p);
+
+        int width = rt.w - 11;
+        p = draw_usage_ui(p, width);
     }
 
-    p = draw_uptime_ui(p, x + 2, y + h - 2);
+    p = draw_uptime_ui(p, r.x + 2, r.y + 1);
+    p = draw_load_avg_ui(p, r.x + 2, r.y + r.h - 2);
 
     return p;
 }
 
-char *draw_cpu_data(CpuMon* cpumon, char *p, int x, int y, int w, int h)
+char *draw_cpu_data(CpuMon* cpumon, char *p)
 {
-    // --- TABLE BOX ---
-    int table_w = 32;
-    int table_x = x + w - table_w - 1;
-    int table_h = CORES_N + 2;
-    int table_y = y + ((h - table_h) >> 1);
+    Rect rt = cpumon->r_table;
 
     // --- TABLE METRICS ---
-    p = draw_temp_data(p, table_x + 5, table_y, cpumon->temp);
-    p = draw_freq_data(p, table_x + 13, table_y, cpumon->freq);
-    p = draw_load_avg_data(p, table_x + 10, table_y + table_h - 1, cpumon->load_avg);
+    p = draw_temp_data(p, rt.x + 3, rt.y, cpumon->temp);
+    p = draw_freq_data(p, rt.x + 10, rt.y, cpumon->freq);
     for (int i = 0; i < CORES_N; i++)
     {
-        int row = table_y + i + 1;
-        p = tui_at(p, table_x + 5, row);
-        p = tui_draw_graph(p, cpumon->graph_hist[i], GRAPH_WIDTH, cpumon->graph_head);
+        int row = rt.y + i + 1;
+        p = tui_at(p, rt.x + 5, row);
+
+        int width = rt.w - 11;
+        p = tui_draw_graph(p, cpumon->graph_hist[i], width, cpumon->graph_head);
         p = draw_usage_data(p, cpumon->usage[i]);
     }
 
     APPEND_LIT(&p, WHITE);
-    p = draw_uptime_data(p, x + 5, y + h - 2, cpumon->uptime);
+    p = draw_uptime_data(p, cpumon->rect.x + 5, cpumon->rect.y + 1, cpumon->uptime);
+
+    p = draw_load_avg_data(p, cpumon->rect.x + 6, cpumon->rect.y + cpumon->rect.h - 2, cpumon->load_avg);
 
     return p;
 }

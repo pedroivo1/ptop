@@ -5,13 +5,9 @@
 #include <signal.h>
 #include "modules/cpu.h"
 #include "modules/mem.h"
+#include "modules/rect.h"
 
 extern volatile sig_atomic_t g_signal_quit;
-
-typedef struct
-{
-    int x, y, w, h;
-} Rect;
 
 typedef struct {
     int running;
@@ -19,9 +15,6 @@ typedef struct {
     int show_mem;
     int needs_resize;
     int force_redraw;
-
-    Rect r_cpu;
-    Rect r_mem;
 
     CpuMon cpu;
     MemMon mem;

@@ -97,8 +97,13 @@ static char *draw_meter(char *p, int x, int y, int w, const char *label, const c
     return p;
 }
 
-char *draw_mem_ui(char *p, int x, int y, int w, int h)
+char *draw_mem_ui(MemMon *memmon, char *p)
 {
+    int x = memmon->rect.x;
+    int y = memmon->rect.y;
+    int w = memmon->rect.w;
+    int h = memmon->rect.h;
+
     // --- MAIN BOX ---
     p = tui_draw_box(p, x, y, w, h, MEM_BORDER_C);
     p = append_str(p, WHITE);
@@ -106,8 +111,13 @@ char *draw_mem_ui(char *p, int x, int y, int w, int h)
     return p;
 }
 
-char *draw_mem_data(MemMon *memmon, char *p, int x, int y, int w, int h)
+char *draw_mem_data(MemMon *memmon, char *p)
 {
+    int x = memmon->rect.x;
+    int y = memmon->rect.y;
+    int w = memmon->rect.w;
+    int h = memmon->rect.h;
+
     (void)h;
     int start_x = x + 2;
     int current_y = y + 1;

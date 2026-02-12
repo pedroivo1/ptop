@@ -3,6 +3,7 @@
 
 #include <stdint.h>
 #include "../cfg.h"
+#include "rect.h"
 
 #define CPU_BORDER_C "\033[38;5;65m"
 
@@ -20,6 +21,9 @@ typedef struct
 
     uint16_t freq;
 
+    Rect rect;
+    Rect r_table;
+
     uint8_t usage[CORES_N];
     int8_t temp;
     uint8_t graph_head;
@@ -31,7 +35,9 @@ void init_cpu(CpuMon *cpumon);
 void deinit_cpu(CpuMon *cpumon);
 void update_cpu_data(CpuMon *cpumon);
 
-char *draw_cpu_ui(char *p, int x, int y, int w, int h);
-char *draw_cpu_data(CpuMon* cpumon, char *p, int x, int y, int w, int h);
+void cpu_recalc(CpuMon *cpumon);
+
+char *draw_cpu_ui(CpuMon *cpumon, char *p);
+char *draw_cpu_data(CpuMon* cpumon, char *p);
 
 #endif
