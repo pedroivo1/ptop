@@ -38,10 +38,19 @@ void tui_setup(char *bg_color, char *font_color)
 
     char buf[512];
     char *p = buf;
-    p = append_str(p, "\033[?1049h\033[?25l\033[?1000h\033[?1002h\033[?1006h");
-    p = append_str(p, bg_color);
+    // Enable Alternate Buffer
+    p = append_str(p, "\033[?1049h");
+    // Hide cursor
+    p = append_str(p, "\033[?25l");
+    // Enable Mouse Click Tracking
+    p = append_str(p, "\033[?1000h");
+    // Enable SGR Mouse Mode
+    p = append_str(p, "\033[?1006h");
+    // Clear entire screen
     p = append_str(p, "\033[2J");
+    // Move cursor to Home position
     p = append_str(p, "\033[H");
+    p = append_str(p, bg_color);
     p = append_str(p, font_color);
 
     if (write(STDOUT_FILENO, buf, p - buf) == -1)
@@ -50,10 +59,20 @@ void tui_setup(char *bg_color, char *font_color)
 
 void tui_restore()
 {
-
     char buf[512];
     char *p = buf;
-    p = append_str(p, "\033[0m\033[?1049l\033[?25h\033[?1000l\033[?1002l\033[?1006l");
+
+    // Reset all attributes to default
+    p = append_str(p, "\033[0m");
+    // Disable Alternate Buffer
+    p = append_str(p, "\033[?1049l");
+    // Show cursor again
+    p = append_str(p, "\033[?25h");
+    // Disable Mouse Tracking
+    p = append_str(p, "\033[?1000l");
+    // Disable SGR Mouse Mode
+    p = append_str(p, "\033[?1006l");
+
     if (write(STDOUT_FILENO, buf, p - buf) == -1)
         perror("write failed");
 
