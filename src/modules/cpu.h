@@ -17,6 +17,9 @@ typedef struct
     uint8_t *usage;
     uint8_t *graph_hist;
 
+    char *stat_buffer;
+    size_t stat_buffer_size;
+
     uint32_t uptime;
     uint32_t load_avg[3];
 
@@ -24,11 +27,13 @@ typedef struct
     int fd_temp;
 
     uint16_t freq;
-    uint16_t core_count;
+    uint16_t phy_count;
+    uint16_t thread_count;
 
     Rect rect;
     Rect r_table;
 
+    uint8_t threads_per_core;
     int8_t temp;
     uint8_t graph_head;
 

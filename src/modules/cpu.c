@@ -38,20 +38,87 @@ int get_coretemp_cpu_id()
     }
     return -1;
 }
+static inline void detect_cpu_topology(CpuMon *cpumon)
+{
+    cpumon->phy_count = 1;
+    cpumon->thread_count = 1;
+    cpumon->threads_per_core = 1;
 
+    int total_threads = get_nprocs(); 
+    if (total_threads <= 0) total_threads = 1;
+
+    int fd = open("/proc/cpuinfo", O_RDONLY);
+    if (fd < 0) {
+        cpumon->thread_count = (uint16_t)total_threads;
+        cpumon->phy_count = (uint16_t)total_threads;
+        return;
+    }
+
+    char buf[1024]; 
+    ssize_t bytes_read = read(fd, buf, sizeof(buf) - 1);
+    close(fd);
+
+    if (bytes_read <= 0) {
+        cpumon->thread_count = (uint16_t)total_threads;
+        return;
+    }
+
+    buf[bytes_read] = '\0';
+
+    int siblings = 0;
+    int phy_cores = 0;
+
+    char *p = buf;
+    char *line;
+
+    while (*p)
+    {
+        line = p;
+        while (*p && *p != '\n') p++;
+        
+        if (*p == '\n') *p++ = '\0';
+
+        if (strncmp(line, "siblings", 8) == 0) {
+            char *val = strchr(line, ':');
+            if (val) siblings = atoi(val + 1);
+        }
+        
+        if (strncmp(line, "cpu cores", 9) == 0) {
+            char *val = strchr(line, ':');
+            if (val) phy_cores = atoi(val + 1);
+        }
+
+        if (siblings > 0 && phy_cores > 0) break;
+    }
+
+    if (siblings <= 0) siblings = total_threads;
+    if (phy_cores <= 0) phy_cores = siblings;
+
+    cpumon->thread_count = (uint16_t)total_threads;
+    cpumon->phy_count    = (uint16_t)phy_cores;
+
+    if (phy_cores > 0)
+        cpumon->threads_per_core = (uint16_t)(siblings / phy_cores);
+    else
+        cpumon->threads_per_core = 1;
+}
 void init_cpu(CpuMon *cpumon)
 {
     memset(cpumon, 0, sizeof(*cpumon));
 
-    cpumon->core_count = get_nprocs();
-    if (cpumon->core_count <= 0) cpumon->core_count = 1;
+    detect_cpu_topology(cpumon);
 
-    cpumon->prev_total = calloc(cpumon->core_count, sizeof(*cpumon->prev_total));
-    cpumon->prev_idle = calloc(cpumon->core_count, sizeof(*cpumon->prev_idle));
-    cpumon->usage = calloc(cpumon->core_count, sizeof(*cpumon->usage));
-    cpumon->fd_freq = calloc(cpumon->core_count, sizeof(*cpumon->fd_freq)); // mon->core_count / 2
+    int num_lines = cpumon->thread_count + 2;
+    size_t line_len = 512;
+    cpumon->stat_buffer_size = num_lines * line_len;
+    cpumon->stat_buffer = malloc(cpumon->stat_buffer_size);
 
-    cpumon->graph_hist = calloc(cpumon->core_count * GRAPH_WIDTH, sizeof(uint8_t));
+    cpumon->prev_total = calloc(cpumon->thread_count, sizeof(*cpumon->prev_total));
+    cpumon->prev_idle = calloc(cpumon->thread_count, sizeof(*cpumon->prev_idle));
+    cpumon->usage = calloc(cpumon->thread_count, sizeof(*cpumon->usage));
+    cpumon->fd_freq = calloc(cpumon->phy_count, sizeof(*cpumon->fd_freq));
+
+    cpumon->graph_hist = calloc(cpumon->thread_count * GRAPH_WIDTH, sizeof(uint8_t));
 
     cpumon->fd_stat = open(STAT_PATH, O_RDONLY);
 
@@ -66,7 +133,7 @@ void init_cpu(CpuMon *cpumon)
     *p = '\0';
     cpumon->fd_temp = open(path, O_RDONLY);
 
-    for (size_t i = 0; i < cpumon->core_count; i++) // mon->core_count / 2
+    for (size_t i = 0; i < cpumon->phy_count; i++)
     {
         p = path;
         APPEND_LIT(&p, "/sys/devices/system/cpu/cpu");
@@ -79,16 +146,21 @@ void init_cpu(CpuMon *cpumon)
 
 void deinit_cpu(CpuMon *cpumon)
 {
-    close(cpumon->fd_stat);
-    close(cpumon->fd_temp);
-    for (int i = 0; i < cpumon->core_count; i++) // mon->core_count / 2
-        close(cpumon->fd_freq[i]);
+    if (cpumon->fd_stat > 0) close(cpumon->fd_stat);
+    if (cpumon->fd_temp > 0) close(cpumon->fd_temp);
+    
+    if (cpumon->fd_freq) {
+        for (int i = 0; i < cpumon->phy_count; i++) {
+            if (cpumon->fd_freq[i] > 0) close(cpumon->fd_freq[i]);
+        }
+    }
 
-    free(cpumon->fd_freq);
-    free(cpumon->prev_total);
-    free(cpumon->prev_idle);
-    free(cpumon->usage);
-    free(cpumon->graph_hist);
+    if (cpumon->stat_buffer) free(cpumon->stat_buffer);
+    if (cpumon->fd_freq)     free(cpumon->fd_freq);
+    if (cpumon->prev_total)  free(cpumon->prev_total);
+    if (cpumon->prev_idle)   free(cpumon->prev_idle);
+    if (cpumon->usage)       free(cpumon->usage);
+    if (cpumon->graph_hist)  free(cpumon->graph_hist);
 }
 
 static void get_temp_c(CpuMon *cpumon)
@@ -102,7 +174,7 @@ static void get_freq_mhz(CpuMon *cpumon)
     uint64_t total = 0;
     int valid_readings = 0;
 
-    for (int i = 0; i < cpumon->core_count; i++) // mon->core_count / 2
+    for (int i = 0; i < cpumon->phy_count; i++)
     {
         if (cpumon->fd_freq[i] > 0) {
             uint64_t val = read_sysfs_uint64(cpumon->fd_freq[i]);
@@ -121,18 +193,16 @@ static void get_freq_mhz(CpuMon *cpumon)
 
 static void parse_stats(CpuMon* cpumon)
 {
-    char buf[16384]; 
-    
-    ssize_t bytes_read = pread(cpumon->fd_stat, buf, sizeof(buf) - 1, 0);
+    ssize_t bytes_read = pread(cpumon->fd_stat, cpumon->stat_buffer, cpumon->stat_buffer_size - 1, 0);
     if (bytes_read < 0) return;
-    
-    buf[bytes_read] = '\0';
 
-    char *p = buf;
+    cpumon->stat_buffer[bytes_read] = '\0';
+
+    char *p = cpumon->stat_buffer;
     
     skip_line(&p);
 
-    for (size_t cpu_id = 0; cpu_id < cpumon->core_count; cpu_id++)
+    for (size_t cpu_id = 0; cpu_id < cpumon->thread_count; cpu_id++)
     {
         if (strncmp(p, "cpu", 3) != 0) break;
 
@@ -216,7 +286,7 @@ void cpu_recalc(CpuMon *cpumon)
         table_w = cpumon->rect.w/2;
     if (table_w < 32 - 21 + 7)
         table_w = 11;
-    int table_h = cpumon->core_count + 2;
+    int table_h = cpumon->thread_count + 2;
 
     int table_x = cpumon->rect.x + cpumon->rect.w - table_w - 1;
 
@@ -369,7 +439,7 @@ char *draw_cpu_ui(CpuMon *cpumon, char *p)
     APPEND_LIT(&p, WHITE);
     p = draw_temp_ui(p, rt.x + 3, rt.y);
     p = draw_freq_ui(p, rt.x + 10, rt.y);
-    for (int i = 0; i < cpumon->core_count; i++)
+    for (int i = 0; i < cpumon->thread_count; i++)
     {
         int row = rt.y + i + 1;
         p = tui_at(p, rt.x + 1, row);
@@ -392,7 +462,7 @@ char *draw_cpu_data(CpuMon* cpumon, char *p)
     // --- TABLE METRICS ---
     p = draw_temp_data(p, rt.x + 3, rt.y, cpumon->temp);
     p = draw_freq_data(p, rt.x + 10, rt.y, cpumon->freq);
-    for (int i = 0; i < cpumon->core_count; i++)
+    for (int i = 0; i < cpumon->thread_count; i++)
     {
         int row = rt.y + i + 1;
         p = tui_at(p, rt.x + 5, row);
