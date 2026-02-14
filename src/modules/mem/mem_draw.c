@@ -4,7 +4,7 @@
 char *draw_meter(char *p, int x, int y, int w, const char *label, const char *color_bar, int perc, uint64_t val_kb)
 {
     int label_w = 12;
-    int value_w = 11;
+    int value_w = 9;
     int bar_w = w - label_w - value_w;
     if (bar_w < 5) bar_w = 5;
 

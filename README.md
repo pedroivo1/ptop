@@ -6,29 +6,27 @@
 ![Language](https://img.shields.io/badge/-C11-blue)
 ![Usage](https://img.shields.io/badge/Usage-System_resource_monitor-yellow)
 
-Monitor de recursos feito em C, focado em performance extrema. Inspirado no [btop](https://github.com/aristocratos/btop).
+**ptop** é um monitor de recursos de sistema focado em **performance**. Escrito em C puro, sem dependências externas além da biblioteca padrão.
+
+Inspirado na estética do [btop](https://github.com/aristocratos/btop), mas arquitetado para ser leve, modular e eficiente.
 
 | ptop (WIP) | btop (Original) |
 | :---: | :---: |
-| ![Tela do ptop](.github/img/ptop.png) | ![Tela do btop](.github/img/btop.webp) |
+| ![Tela do ptop](.github/img/ptop.webp) | ![Tela do btop](.github/img/btop.webp) |
 
-## Destaques
+## Instalação
 
-* **Zero Bloat:** Sem dependências externas (apenas libc).
-* **Zero Malloc:** Alocação de memória 100% estática durante a execução.
-* **Visual:** Gráficos em Braille, gradientes TrueColor e layout responsivo.
-* **Suckless:** Configuração via header file (`cfg.h`) para compilação otimizada por máquina.
-
-## Compilação
-
-O projeto segue a filosofia "suckless". Edite `src/cfg.h` para definir a topologia da sua CPU e compile:
+O projeto segue a filosofia *suckless*. Não há scripts de configuração complexos; o código se adapta ao seu hardware.
 
 ```bash
-# 1. Edite a configuração
-nano src/cfg.h
+# 1. Clone o repositório
+git clone [https://github.com/seu-usuario/ptop](https://github.com/seu-usuario/ptop)
+cd ptop
 
-# 2. Compile e rode
+# 2. Compile (Otimizado para sua arquitetura)
 make release
+
+# 3. Execute
 ./ptop
 ```
 
