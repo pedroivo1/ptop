@@ -1,10 +1,7 @@
 #ifndef MEM_H
 #define MEM_H
 
-#include <stdint.h>
-#include "rect.h"
-
-#define MEM_BORDER_C "\033[38;5;101m"
+#include "common/rect.h"
 
 typedef struct
 {

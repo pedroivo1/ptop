@@ -1,21 +1,21 @@
 #include <stdio.h>
-#include "../src/tui.c"
+#include "../src/theme/theme.h"
 
 static const char* ctemp[16] =
 {
-    TEMP_0, TEMP_1, TEMP_2, TEMP_3, TEMP_4, TEMP_5, TEMP_6, TEMP_7,
-    TEMP_8, TEMP_9, TEMP_10, TEMP_11, TEMP_12, TEMP_13, TEMP_14, TEMP_15
+    TG_TEMP_0, TG_TEMP_1, TG_TEMP_2, TG_TEMP_3, TG_TEMP_4, TG_TEMP_5, TG_TEMP_6, TG_TEMP_7,
+    TG_TEMP_8, TG_TEMP_9, TG_TEMP_10, TG_TEMP_11, TG_TEMP_12, TG_TEMP_13, TG_TEMP_14, TG_TEMP_15
 };
 
 static const char* cperc[8] =
 {
-    PERC_0, PERC_1, PERC_2, PERC_3, PERC_4, PERC_5, PERC_6, PERC_7
+    TG_P0, TG_P1, TG_P2, TG_P3, TG_P4, TG_P5, TG_P6, TG_P7
 };
 
 static const char* blocks[6] = {" ", ".", ".", ":", ":", ":"};
 
 void print_header(const char* title) {
-    printf(PRESET "\n" BOLD "%s" NOBOLD "\n", title);
+    printf(TX_RESET "\n" TX_BOLD "%s" TX_NOBOLD "\n", title);
 }
 
 int main() {
@@ -24,15 +24,15 @@ int main() {
     
     printf("Fluxo: ");
     for(int i = 0; i < 16; i++) { printf("%s███", ctemp[i]); }
-    printf(PRESET "\n\n");
+    printf(TX_RESET "\n\n");
 
-    printf(PRESET "| ID | Cor | ID Macro | INIT °C |  FINAL °C |\n");
-    printf(PRESET "|----|-----|----------|---------|-----------|\n");
+    printf(TX_RESET "| ID | Cor | ID Macro | INIT °C |  FINAL °C |\n");
+    printf(TX_RESET "|----|-----|----------|---------|-----------|\n");
     
     for(int i = 0; i < 16; i++) {
         int temp_val = -128 + (i * 16);
         
-        printf(PRESET "|%3d | %s███" PRESET " | TEMP_%-2d  | " BOLD " %4d   " NOBOLD "|" BOLD " %s%4d °C   " PRESET "|\n", 
+        printf(TX_RESET "|%3d | %s███" TX_RESET " | TEMP_%-2d  | " TX_BOLD " %4d   " TX_NOBOLD "|" TX_BOLD " %s%4d °C   " TX_RESET "|\n", 
                i, ctemp[i], i, temp_val, ctemp[i], temp_val+15);
     }
 
@@ -41,15 +41,15 @@ int main() {
     
     printf("Fluxo: ");
     for(int i = 0; i < 8; i++) { printf("%s███", cperc[i]); }
-    printf(PRESET "\n\n");
+    printf(TX_RESET "\n\n");
 
-    printf(PRESET "| ID | Cor | ID Macro |  INIT %%  |  FINAL %% |\n");
-    printf(PRESET "|----|-----|----------|----------|----------|\n");
+    printf(TX_RESET "| ID | Cor | ID Macro |  INIT %%  |  FINAL %% |\n");
+    printf(TX_RESET "|----|-----|----------|----------|----------|\n");
 
     for(int i = 0; i < 8; i++) {
         int perc_val = 0 + (i * 16);
         
-        printf(PRESET "|%3d | %s███" PRESET " | PERC_%-2d  | " BOLD "  %3d %%  " NOBOLD "|" BOLD " %s %3d %%   " PRESET "|\n", 
+        printf(TX_RESET "|%3d | %s███" TX_RESET " | PERC_%-2d  | " TX_BOLD "  %3d %%  " TX_NOBOLD "|" TX_BOLD " %s %3d %%   " TX_RESET "|\n", 
                i, cperc[i], i, perc_val, cperc[i], perc_val+15);
     }
 

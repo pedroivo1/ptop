@@ -1,11 +1,9 @@
-#ifndef MONITOR_H
-#define MONITOR_H
+#ifndef CPU_H
+#define CPU_H
 
-#include <stdint.h>
-#include "../cfg.h"
-#include "rect.h"
+#include <stddef.h>
 
-#define CPU_BORDER_C "\033[38;5;65m"
+#include "common/rect.h"
 
 typedef struct
 {
@@ -43,7 +41,7 @@ void init_cpu(CpuMon *cpumon);
 void deinit_cpu(CpuMon *cpumon);
 void update_cpu_data(CpuMon *cpumon);
 
-void cpu_recalc(CpuMon *cpumon);
+void recalc_cpu(CpuMon *cpumon);
 
 char *draw_cpu_ui(CpuMon *cpumon, char *p);
 char *draw_cpu_data(CpuMon* cpumon, char *p);

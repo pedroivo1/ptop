@@ -1,15 +1,13 @@
 #include <stdio.h>
-#include <unistd.h>
 #include <termios.h>
 #include <sys/ioctl.h>
 #include <signal.h>
-#include "utils.h"
-#include "tui.h"
-#include "cfg.h"
+
+#include "ui/ui.h"
 
 const char *gradient_temp[16] = {
-    TEMP_0, TEMP_1, TEMP_2, TEMP_3, TEMP_4, TEMP_5, TEMP_6, TEMP_7,
-    TEMP_8, TEMP_9, TEMP_10, TEMP_11, TEMP_12, TEMP_13, TEMP_14, TEMP_15
+    TG_TEMP_0, TG_TEMP_1, TG_TEMP_2, TG_TEMP_3, TG_TEMP_4, TG_TEMP_5, TG_TEMP_6, TG_TEMP_7,
+    TG_TEMP_8, TG_TEMP_9, TG_TEMP_10, TG_TEMP_11, TG_TEMP_12, TG_TEMP_13, TG_TEMP_14, TG_TEMP_15
 };
 
 const char* dots_braille[8] = {
@@ -17,7 +15,7 @@ const char* dots_braille[8] = {
 };
 
 const char* gradient_perc[8] = {
-    PERC_0, PERC_1, PERC_2, PERC_3, PERC_4, PERC_5, PERC_6, PERC_7
+    TG_P0, TG_P1, TG_P2, TG_P3, TG_P4, TG_P5, TG_P6, TG_P7
 };
 
 static struct termios original_term;
@@ -143,7 +141,7 @@ char *tui_draw_graph(char *p, uint8_t *data, int len, int head)
         if (val > 0) {
             p = append_str(p, gradient_perc[dot_idx]);
         } else {
-            APPEND_LIT(&p, "\033[38;5;236m");
+            APPEND_LIT(&p, TX_DIM0);
         }
 
         p = append_str(p, dots_braille[dot_idx]);

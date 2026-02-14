@@ -1,12 +1,7 @@
 #ifndef UTILS_H
 #define UTILS_H
 
-#ifndef _GNU_SOURCE
-#define _GNU_SOURCE
-#endif
-
 #include <string.h>
-#include <stdint.h>
 #include <unistd.h>
 #include <time.h>
 
@@ -14,7 +9,9 @@
 
 static inline uint64_t current_time_ms() {
     struct timespec ts;
-    clock_gettime(CLOCK_MONOTONIC, &ts);
+    
+    timespec_get(&ts, TIME_UTC);
+    
     return (uint64_t)(ts.tv_sec * 1000 + ts.tv_nsec / 1000000);
 }
 

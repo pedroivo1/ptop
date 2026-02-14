@@ -1,11 +1,6 @@
 #ifndef CFG_H
 #define CFG_H
 
-// --- HARDWARE DEFINITIONS ---
-#define CORES_N 12
-#define PHY_CORES_N 6
-#define HWMON_N 10
-
 // --- SETTINGS ---
 #define DELAY_MS 500
 
