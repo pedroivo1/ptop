@@ -1,8 +1,13 @@
 #include <fcntl.h>
+#include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
 
 #include "common/cfg.h"
+#include "common/utils.h"
 #include "ui/ui.h"
+#include "ui/term.h"
 #include "modules/cpu/cpu_internal.h"
 
 void init_cpu(CpuMon *cpumon)
@@ -26,7 +31,7 @@ void init_cpu(CpuMon *cpumon)
     cpumon->fd_stat = open(STAT_PATH, O_RDONLY);
 
     int hwmon_cpu_id = get_temp_id();
-    char path[64];
+    char path[128];
     char *p = path;
     APPEND_LIT(&p, "/sys/class/hwmon/hwmon");
     append_num(&p, hwmon_cpu_id);
@@ -100,63 +105,58 @@ void recalc_cpu(CpuMon *cpumon)
 }
 
 
-char *draw_cpu_ui(CpuMon *cpumon, char *p)
+void draw_cpu_ui(CpuMon *cpumon, char **p)
 {
     Rect r = cpumon->rect;
     Rect rt = cpumon->r_table;
 
     // --- MAIN BOX ---
-    p = tui_draw_box(p, r.x, r.y, r.w, r.h, TC_CPU_BD);
+    tui_draw_box(p, r.x, r.y, r.w, r.h, TC_CPU_BD);
 
     // --- TABLE BOX ---
-    p = tui_draw_box(p, rt.x, rt.y, rt.w, rt.h, TX_DIM1);
+    tui_draw_box(p, rt.x, rt.y, rt.w, rt.h, TX_DIM1);
 
     // --- TABLE UI ---
-    p = tui_draw_up_space(p, rt.x + 2, rt.y, 4);
-    p = tui_draw_up_space(p, rt.x + 9, rt.y, 7);
+    tui_draw_up_space(p, rt.x + 2, rt.y, 4);
+    tui_draw_up_space(p, rt.x + 9, rt.y, 7);
 
-    APPEND_LIT(&p, TX_FONT);
-    p = draw_temp_ui(p, rt.x + 3, rt.y);
-    p = draw_freq_ui(p, rt.x + 10, rt.y);
+    APPEND_LIT(p, TX_FONT);
+    draw_temp_ui(p, rt.x + 3, rt.y);
+    draw_freq_ui(p, rt.x + 10, rt.y);
     for (int i = 0; i < cpumon->thread_count; i++)
     {
         int row = rt.y + i + 1;
-        p = tui_at(p, rt.x + 1, row);
-        p = draw_label_ui(p, i);
+        tui_at(p, rt.x + 1, row);
+        draw_label_ui(p, i);
 
         int width = rt.w - 11;
-        p = draw_usage_ui(p, width);
+        draw_usage_ui(p, width);
     }
 
-    p = draw_uptime_ui(p, r.x + 2, r.y + 1);
-    p = draw_load_avg_ui(p, r.x + 2, r.y + r.h - 2);
-
-    return p;
+    draw_uptime_ui(p, r.x + 2, r.y + 1);
+    draw_load_avg_ui(p, r.x + 2, r.y + r.h - 2);
 }
 
-char *draw_cpu_data(CpuMon* cpumon, char *p)
+void draw_cpu_data(CpuMon* cpumon, char **p)
 {
     Rect rt = cpumon->r_table;
 
     // --- TABLE METRICS ---
-    p = draw_temp_data(p, rt.x + 3, rt.y, cpumon->temp);
-    p = draw_freq_data(p, rt.x + 10, rt.y, cpumon->freq);
+    draw_temp_data(p, rt.x + 3, rt.y, cpumon->temp);
+    draw_freq_data(p, rt.x + 10, rt.y, cpumon->freq);
     for (int i = 0; i < cpumon->thread_count; i++)
     {
         int row = rt.y + i + 1;
-        p = tui_at(p, rt.x + 5, row);
+        tui_at(p, rt.x + 5, row);
 
         int width = rt.w - 11;
 
         uint8_t *core_hist_ptr = &cpumon->graph_hist[i * GRAPH_WIDTH];
-        p = tui_draw_graph(p, core_hist_ptr, width, cpumon->graph_head);
-        p = draw_usage_data(p, cpumon->usage[i]);
+        tui_draw_graph(p, core_hist_ptr, width, cpumon->graph_head);
+        draw_usage_data(p, cpumon->usage[i]);
     }
 
-    APPEND_LIT(&p, TX_FONT);
-    p = draw_uptime_data(p, cpumon->rect.x + 5, cpumon->rect.y + 1, cpumon->uptime);
-
-    p = draw_load_avg_data(p, cpumon->rect.x + 6, cpumon->rect.y + cpumon->rect.h - 2, cpumon->load_avg);
-
-    return p;
+    APPEND_LIT(p, TX_FONT);
+    draw_uptime_data(p, cpumon->rect.x + 5, cpumon->rect.y + 1, cpumon->uptime);
+    draw_load_avg_data(p, cpumon->rect.x + 6, cpumon->rect.y + cpumon->rect.h - 2, cpumon->load_avg);
 }

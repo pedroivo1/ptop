@@ -2,6 +2,7 @@
 #define CPU_H
 
 #include <stddef.h>
+#include <stddef.h>
 
 #include "common/rect.h"
 
@@ -39,11 +40,11 @@ typedef struct
 
 void init_cpu(CpuMon *cpumon);
 void deinit_cpu(CpuMon *cpumon);
+
 void update_cpu_data(CpuMon *cpumon);
 
 void recalc_cpu(CpuMon *cpumon);
-
-char *draw_cpu_ui(CpuMon *cpumon, char *p);
-char *draw_cpu_data(CpuMon* cpumon, char *p);
+void draw_cpu_ui(CpuMon *cpumon, char **p);
+void draw_cpu_data(CpuMon* cpumon, char **p);
 
 #endif

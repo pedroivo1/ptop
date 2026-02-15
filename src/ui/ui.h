@@ -27,30 +27,27 @@ extern const char* gradient_temp[16];
 extern const char* gradient_perc[8];
 extern const char* dots_braille[8];
 
-static inline char *tui_at(char *p, int x, int y)
+static inline void tui_at(char **p, int x, int y)
 {
-    APPEND_LIT(&p, "\033[");
-    append_num(&p, y);
-    APPEND_LIT(&p, ";");
-    append_num(&p, x);
-    APPEND_LIT(&p, "H");
-    return p;
+    APPEND_LIT(p, "\033[");
+    append_num(p, y);
+    *(*p)++ = ';';
+    append_num(p, x);
+    *(*p)++ = 'H';
 }
 
 void tui_setup(char *bg_color, char *font_color);
 void tui_restore();
-void tui_update_size();
-char *tui_draw_box(char *p, int x, int y, int w, int h, char *color);
-char *tui_draw_up_space(char *p, int x, int y, int len);
-char *tui_draw_bottom_space(char *p, int x, int y, int len);
-char *tui_draw_graph(char *p, uint8_t *data, int len, int head);
+
+void tui_draw_box(char **p, int x, int y, int w, int h, char *color);
+void tui_draw_up_space(char **p, int x, int y, int len);
+void tui_draw_bottom_space(char **p, int x, int y, int len);
+void tui_draw_graph(char **p, uint8_t *data, int len, int head);
 
 extern int term_w;
 extern int term_h;
-
-void tui_setup(char *bg_color, char *font_color);
-void tui_restore();
 void handle_winch(int sig);
-char *tui_begin_frame(char *p, int *resized);
+void tui_begin_frame(char **p, int *resized);
+void tui_update_size();
 
 #endif

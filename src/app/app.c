@@ -1,12 +1,14 @@
-#include <stdlib.h>
-#include <stdio.h>
-#include <unistd.h>
 #include <poll.h>
+#include <time.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
 #include <string.h>
 
 #include "app/app.h"
 #include "app/app_internal.h"
 #include "ui/ui.h"
+#include "ui/term.h"
 #include "common/cfg.h"
 #include "common/utils.h"
 
@@ -39,7 +41,11 @@ void app_run(AppContext *ctx)
 {
     size_t buf_len = OUT_BUFF_LEN;
     char *buf = malloc(buf_len);
-    if (!buf) return;
+    if (!buf)
+    {
+        perror("malloc failed\nApp: app_run()");
+        return;
+    }
 
     uint64_t last_update_time = 0;
     uint64_t now;

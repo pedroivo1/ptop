@@ -1,10 +1,11 @@
 #include <poll.h>
-#include <unistd.h>
 #include <stdio.h>
+#include <unistd.h>
 
 #include "app.h"
 #include "app_internal.h"
 #include "ui/ui.h"
+#include "modules/cpu/cpu.h"
 
 void app_update_layout(AppContext *ctx)
 {

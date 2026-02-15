@@ -21,7 +21,7 @@ void init_mem(MemMon *memmon);
 void deinit_mem(MemMon *memmon);
 void update_mem_data(MemMon *memmon);
 
-char *draw_mem_ui(MemMon *memmon, char *p);
-char *draw_mem_data(MemMon *memmon, char *p);
+void draw_mem_ui(MemMon *memmon, char **p);
+void draw_mem_data(MemMon *memmon, char **p);
 
 #endif

@@ -1,4 +1,7 @@
+#include <unistd.h>
+
 #include "common/cfg.h"
+#include "common/utils.h"
 #include "modules/mem/mem.h"
 #include "ui/ui.h"
 
