@@ -6,7 +6,7 @@
 ![Language](https://img.shields.io/badge/-C11-blue)
 ![Usage](https://img.shields.io/badge/Usage-System_resource_monitor-yellow)
 
-**ptop** é um monitor de recursos de sistema focado em **performance**. Escrito em C puro, sem dependências externas além da biblioteca padrão.
+**ptop** (personal tabel of processes) é um monitor de recursos de sistema focado em performance. Escrito em C puro, sem dependências externas além da biblioteca padrão.
 
 Inspirado na estética do [btop](https://github.com/aristocratos/btop), mas arquitetado para ser leve, modular e eficiente.
 
@@ -16,11 +16,9 @@ Inspirado na estética do [btop](https://github.com/aristocratos/btop), mas arqu
 
 ## Instalação
 
-O projeto segue a filosofia *suckless*. Não há scripts de configuração complexos; o código se adapta ao seu hardware.
-
 ```bash
 # 1. Clone o repositório
-git clone [https://github.com/seu-usuario/ptop](https://github.com/seu-usuario/ptop)
+git clone https://github.com/pedroivo1/ptop.git
 cd ptop
 
 # 2. Compile (Otimizado para sua arquitetura)

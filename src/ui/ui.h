@@ -46,7 +46,7 @@ void tui_draw_graph(char **p, uint8_t *data, int len, int head);
 
 extern int term_w;
 extern int term_h;
-void handle_winch(int sig);
+void tui_handle_winch(int sig);
 void tui_begin_frame(char **p, int *resized);
 void tui_update_size();
 

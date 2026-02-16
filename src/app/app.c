@@ -43,7 +43,7 @@ void app_run(AppContext *ctx)
     char *buf = malloc(buf_len);
     if (!buf)
     {
-        perror("malloc failed\nApp: app_run()");
+        perror("malloc(buf_len) failed\nApp: app_run()");
         return;
     }
 

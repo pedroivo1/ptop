@@ -32,7 +32,7 @@ int term_w = 0;
 int term_h = 0;
 static volatile sig_atomic_t win_resized = 1;
 
-void handle_winch(int sig)
+void tui_handle_winch(int sig)
 {
     (void)sig;
     win_resized = 1;
@@ -87,7 +87,7 @@ void tui_setup(char *bg_color, char *font_color)
         exit(1);
     }
 
-    signal(SIGWINCH, handle_winch);
+    signal(SIGWINCH, tui_handle_winch);
 
     char buf[1024];
     char *p = buf;
@@ -109,7 +109,7 @@ void tui_restore()
     char *p = buf;
 
     APPEND_LIT(&p, TUI_EXIT_SEQ);
-    write(STDOUT_FILENO, buf, p - buf);
+    if (write(STDOUT_FILENO, buf, p - buf) < 0){}
     tcsetattr(STDIN_FILENO, TCSANOW, &original_term);
 }
 

@@ -32,6 +32,10 @@ typedef struct
     Rect rect;
     Rect r_table;
 
+    uint16_t table_cols;
+    uint16_t table_rows;
+    uint16_t col_width;
+
     uint8_t threads_per_core;
     int8_t temp;
     uint8_t graph_head;

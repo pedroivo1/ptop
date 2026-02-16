@@ -79,31 +79,71 @@ void update_cpu_data(CpuMon *cpumon)
     get_load_avg(cpumon);
 }
 
-
 void recalc_cpu(CpuMon *cpumon)
 {
-    int table_w = 32;
-
-    if (table_w * 2 > cpumon->rect.w)
-        table_w = cpumon->rect.w / 2;
+    const uint16_t BORDER_PADDING = 1;
     
-    if (table_w < 18)
-        table_w = 11;
+    // Tamanhos fixos dos elementos
+    const uint16_t LABEL_LEN = 4; // "C0  "
+    const uint16_t USAGE_LEN = 5; // " 100%"
+    
+    // Calcula a largura IDEAL de uma coluna baseada no seu macro GRAPH_WIDTH
+    const uint16_t IDEAL_COL_WIDTH = LABEL_LEN + GRAPH_WIDTH + USAGE_LEN;
 
-    int table_h = cpumon->thread_count + 2;
+    // --- ROWS ---
+    uint16_t rows = cpumon->rect.h - (BORDER_PADDING * 4);
+    if (rows > cpumon->thread_count)
+        rows = cpumon->thread_count + BORDER_PADDING;
+    if (rows < 1)
+        rows = 1;
 
-    int table_x = cpumon->rect.x + cpumon->rect.w - table_w - 1;
+    // --- COLUMNS ---
+    uint16_t cols = (cpumon->thread_count + rows - 1) / rows;
+    
+    // --- WIDTH ---
+    uint16_t gaps = (cols > 0) ? (cols - 1) : 0;
+    uint16_t exact_w = (cols * IDEAL_COL_WIDTH) + gaps + 2; // +2 das bordas
 
-    int table_y = cpumon->rect.y + ((cpumon->rect.h - table_h) >> 1);
+    uint16_t max_allowed_w = cpumon->rect.w / 2;
 
+    uint16_t table_w = exact_w;
+    if (table_w > max_allowed_w) {
+        table_w = max_allowed_w;
+    }
+
+    // --- HEIGHT ---
+    uint16_t table_h = 0;
+    if (cols == 1 && rows < cpumon->rect.h - 2)
+    {
+        table_h = rows + (BORDER_PADDING); 
+    }
+    else
+    {
+        table_h = cpumon->rect.h - 2; 
+    }
+
+    // --- RECT ---
+    uint16_t table_x = cpumon->rect.x + cpumon->rect.w - table_w - 1;
+    uint16_t table_y = cpumon->rect.y + (cpumon->rect.h - table_h) / 2;
     cpumon->r_table = (Rect){
         .x = (uint16_t)table_x,
         .y = (uint16_t)table_y,
         .w = (uint16_t)table_w,
         .h = (uint16_t)table_h
     };
-}
 
+    // --- GRID ---
+    cpumon->table_cols = cols;
+    cpumon->table_rows = rows;
+    if (cols > 0) {
+        int available_width = cpumon->r_table.w - 2 - gaps;
+        if (available_width < 1) available_width = 1;
+        
+        cpumon->col_width = available_width / cols;
+    } else {
+        cpumon->col_width = 1;
+    }
+}
 
 void draw_cpu_ui(CpuMon *cpumon, char **p)
 {
@@ -115,21 +155,28 @@ void draw_cpu_ui(CpuMon *cpumon, char **p)
 
     // --- TABLE BOX ---
     tui_draw_box(p, rt.x, rt.y, rt.w, rt.h, TX_DIM1);
-
-    // --- TABLE UI ---
+    
     tui_draw_up_space(p, rt.x + 2, rt.y, 4);
     tui_draw_up_space(p, rt.x + 9, rt.y, 7);
-
     APPEND_LIT(p, TX_FONT);
     draw_temp_ui(p, rt.x + 3, rt.y);
     draw_freq_ui(p, rt.x + 10, rt.y);
+
     for (int i = 0; i < cpumon->thread_count; i++)
     {
-        int row = rt.y + i + 1;
-        tui_at(p, rt.x + 1, row);
+        int col = i / cpumon->table_rows;
+        int row = i % cpumon->table_rows;
+        
+        int bx = rt.x + 1 + (col * cpumon->col_width) + col;
+        int by = rt.y + 1 + row;
+
+        tui_at(p, bx, by);
+
         draw_label_ui(p, i);
 
-        int width = rt.w - 11;
+        int width = cpumon->col_width - 9;
+        if (width < 0) width = 0;
+        
         draw_usage_ui(p, width);
     }
 
@@ -144,15 +191,27 @@ void draw_cpu_data(CpuMon* cpumon, char **p)
     // --- TABLE METRICS ---
     draw_temp_data(p, rt.x + 3, rt.y, cpumon->temp);
     draw_freq_data(p, rt.x + 10, rt.y, cpumon->freq);
+
     for (int i = 0; i < cpumon->thread_count; i++)
     {
-        int row = rt.y + i + 1;
-        tui_at(p, rt.x + 5, row);
+        int col = i / cpumon->table_rows;
+        int row = i % cpumon->table_rows;
 
-        int width = rt.w - 11;
+        int bx = rt.x + 1 + (col * cpumon->col_width) + col;
+        int by = rt.y + 1 + row;
+
+        int available_w = cpumon->col_width - 9;
+        if (available_w < 0) available_w = 0;
+
+        int draw_w = available_w;
+        int padding_left = 0;
+
+        tui_at(p, bx + 4 + padding_left, by);
 
         uint8_t *core_hist_ptr = &cpumon->graph_hist[i * GRAPH_WIDTH];
-        tui_draw_graph(p, core_hist_ptr, width, cpumon->graph_head);
+        
+        tui_draw_graph(p, core_hist_ptr, draw_w, cpumon->graph_head);
+        
         draw_usage_data(p, cpumon->usage[i]);
     }
 
