@@ -3,7 +3,6 @@
 
 #include <stddef.h>
 #include <stdint.h>
-
 #include "util/rect.h"
 
 typedef struct
@@ -41,6 +40,7 @@ typedef struct
     uint8_t graph_head;
     uint8_t graph_width;
 
+    uint8_t is_compact;
 } CpuMon;
 
 void init_cpu(CpuMon *cpumon);

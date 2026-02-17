@@ -1,17 +1,16 @@
-#include <poll.h>
-#include <time.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
 #include <stdint.h>
-
 #include "app/app.h"
 #include "app/app_internal.h"
 #include "ui/ui.h"
 #include "ui/term.h"
 #include "util/util.h"
 #include "cfg/buf.h"
+#include "mod/cpu/cpu.h"
+#include "mod/mem/mem.h"
 
 void app_init(AppContext *ctx)
 {

@@ -1,13 +1,11 @@
 #include <fcntl.h>
-#include <stdio.h>
 #include <unistd.h>
 #include <string.h>
-
 #include "util/util.h"
 #include "ui/ui.h"
 #include "ui/term.h"
 #include "cfg/path.h"
-#include "modules/mem/mem_internal.h"
+#include "mod/mem/mem_internal.h"
 
 void init_mem(MemMon *memmon)
 {

@@ -1,3 +1,6 @@
+#ifndef PATH_H
+#define PATH_H
+
 #define HWMON        "hwmon"
 #define HWMON_DIR    "/sys/class/hwmon/"
 #define HWMON_PER    "/name"
@@ -16,3 +19,5 @@
 #define CORETEMP      "coretemp"
 
 #define MEMINFO       "/proc/meminfo"
+
+#endif

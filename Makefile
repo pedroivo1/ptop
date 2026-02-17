@@ -11,8 +11,8 @@ TEST_FLAGS = $(DEBUG_FLAGS) -Isrc -Itest/unity -DUNITY_OUTPUT_COLOR
 
 # --- Files ---
 SRCS = $(shell find src -name "*.c")
-# SRCS = src/main.c src/modules/cpu.c src/tui.c
-TEST_SRCS = test/test_utils.c test/unity/unity.c
+# SRCS = src/main.c src/mod/cpu.c src/tui.c
+TEST_SRCS = test/test_util.c test/unity/unity.c
 COLORS_SRC = test/show_colors.c
 
 .PHONY: all release debug clean test colors

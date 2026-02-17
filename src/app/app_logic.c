@@ -1,22 +1,18 @@
 #include <poll.h>
 #include <stdio.h>
 #include <unistd.h>
-
 #include "app.h"
 #include "app_internal.h"
 #include "ui/ui.h"
 #include "ui/term.h"
-#include "modules/cpu/cpu.h"
-#include "modules/mem/mem.h"
+#include "mod/cpu/cpu.h"
+#include "mod/mem/mem.h"
 
 void app_update_layout(AppContext *ctx)
 {
     int w = term_w;
     int h = term_h;
     int margin = 1;
-
-    ctx->cpu.rect = (Rect){0, 0, 0, 0};
-    ctx->mem.rect = (Rect){0, 0, 0, 0};
 
     if (ctx->show_cpu && ctx->show_mem)
     {
@@ -43,6 +39,8 @@ void app_update_layout(AppContext *ctx)
     ctx->needs_resize = 0;
 }
 
+static void handle_mouse(AppContext *ctx);
+static void handle_keyboard(AppContext *ctx, char key);
 void app_handle_input(AppContext *ctx, int timeout_ms)
 {
     if (g_signal_quit) {
@@ -61,34 +59,13 @@ void app_handle_input(AppContext *ctx, int timeout_ms)
         char key;
         if (read(STDIN_FILENO, &key, 1) > 0)
         {
-            if (key == 0x1B) // ESC sequence handling
+            if (key == 0x1B)
             {
-                char trash[128];
-                struct pollfd pfd_drain = { STDIN_FILENO, POLLIN, 0 };
-                while(poll(&pfd_drain, 1, 0) > 0) {
-                    if (read(STDIN_FILENO, trash, sizeof(trash)) <= 0) break;
-                }
-                return;
+                handle_mouse(ctx);
             }
-
-            switch (key)
+            else
             {
-                case 'q':
-                case 'Q':
-                case 0x03: // CTRL+C
-                    ctx->running = 0;
-                    break;
-                case '1':
-                    ctx->show_cpu = !ctx->show_cpu;
-                    app_update_layout(ctx);
-                    break;
-                case '2':
-                    ctx->show_mem = !ctx->show_mem;
-                    app_update_layout(ctx);
-                    break;
-                case 'r':
-                    ctx->force_redraw = 1;
-                    break;
+                handle_keyboard(ctx, key);
             }
         }
     }
@@ -102,4 +79,71 @@ void app_update_state(AppContext *ctx)
 {
     if (ctx->show_cpu) update_cpu_data(&ctx->cpu);
     if (ctx->show_mem) update_mem_data(&ctx->mem);
+}
+
+static void handle_mouse(AppContext *ctx)
+{
+    char seq[32];
+    int len = 0;
+    struct pollfd pfd_drain = { STDIN_FILENO, POLLIN, 0 };
+    
+    while(poll(&pfd_drain, 1, 0) > 0 && len < 31) {
+        if (read(STDIN_FILENO, &seq[len], 1) <= 0) break;
+        len++;
+    }
+    seq[len] = '\0';
+
+    if (len > 3 && seq[0] == '[' && seq[1] == '<') {
+        int btn, mx, my;
+        char type;
+        
+        if (sscanf(seq + 2, "%d;%d;%d%c", &btn, &mx, &my, &type) == 4) {
+            
+            if (type == 'M' && btn == 0) {
+                
+                int base_x = term_w - 12;
+                int base_y = 1;
+
+                if (my == base_y) {
+                    
+                    if (mx >= base_x && mx <= base_x + 2) {
+                        if (ctx->delay > 100) ctx->delay -= 100;
+                        else ctx->delay = 100;
+                        ctx->force_redraw = 1;
+                    }
+                    
+                    int num_len = (ctx->delay >= 1000) ? 4 : 3;
+                    int plus_offset = 3 + num_len + 2 + 1;
+
+                    if (mx >= base_x + plus_offset && mx <= base_x + plus_offset + 1) {
+                        if (ctx->delay < 9900) ctx->delay += 100;
+                        ctx->force_redraw = 1;
+                    }
+                }
+            }
+        }
+    }
+}
+
+static void handle_keyboard(AppContext *ctx, char key)
+{
+    switch (key)
+    {
+        case 'q':
+        case 'Q':
+        case 0x03: // CTRL+C
+            ctx->running = 0;
+            break;
+        case '1':
+            ctx->show_cpu = !ctx->show_cpu;
+            app_update_layout(ctx);
+            break;
+        case '2':
+            ctx->show_mem = !ctx->show_mem;
+            app_update_layout(ctx);
+            break;
+        case 'r':
+            ctx->force_redraw = 1;
+            break;
+    }
 }

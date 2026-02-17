@@ -5,7 +5,6 @@
 #include <stdlib.h>
 #include <termios.h>
 #include <sys/ioctl.h>
-
 #include "ui/ui.h"
 #include "ui/term.h"
 
@@ -169,12 +168,12 @@ void tui_draw_graph(char **p, uint8_t *data, int len, int head)
         if (val == 0)
         {
             if (last_dot_idx != -1)
-            { 
+            {
                 APPEND_LIT(p, TX_DIM0);
                 last_dot_idx = -1;
             }
-        } 
-        else 
+        }
+        else
         {
             if (dot_idx != last_dot_idx)
             {

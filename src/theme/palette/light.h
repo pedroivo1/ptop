@@ -8,14 +8,14 @@
 #define PAL_DIM_DARK   "250"  // Texto Cinza Claro (detalhes)
 
 // --- ANSI COLORS (Tons mais escuros) ---
-#define PAL_BLK        "252"  
+#define PAL_BLK        "252"
 #define PAL_RED        "124"  // Vermelho Sangue (escuro)
 #define PAL_GRN        "28"   // Verde Floresta
 #define PAL_YLW        "136"  // Ouro Escuro (Amarelo puro 226 é invisível no branco)
 #define PAL_BLU        "18"   // Azul Marinho
 #define PAL_MAG        "90"   // Roxo Escuro
 #define PAL_CYN        "24"   // Turquesa Escuro
-#define PAL_WHT        "232" 
+#define PAL_WHT        "232"
 
 // --- GRADIENT: TEMPERATURE (0-15) ---
 // Mudança: De Azul->Ciano->Verde->Amarelo->Vermelho

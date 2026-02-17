@@ -1,5 +1,5 @@
 #include <stdio.h>
-#include "../src/theme/theme.h"
+#include "src/theme/theme.h"
 
 static const char* ctemp[16] =
 {

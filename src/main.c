@@ -1,12 +1,4 @@
-#include <stdio.h>
-#include <unistd.h>
 #include <signal.h>
-#include <stdalign.h>
-#include <time.h>
-#include <stdlib.h>
-
-#include "util/util.h"
-#include "ui/ui.h"
 #include "app/app.h"
 
 volatile sig_atomic_t g_signal_quit = 0;

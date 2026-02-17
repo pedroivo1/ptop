@@ -4,8 +4,7 @@
 #include <stdint.h>
 #include <dirent.h>
 #include <sys/sysinfo.h>
-
-#include "modules/cpu/cpu.h"
+#include "mod/cpu/cpu.h"
 #include "util/util.h"
 #include "cfg/path.h"
 
@@ -30,7 +29,7 @@ int get_temp_id()
         APPEND_LIT(&p, HWMON_DIR);
         append_str(&p, entry->d_name);
         APPEND_LIT(&p, HWMON_PER);
-        *p = '\0'; 
+        *p = '\0';
 
         int fd = open(path, O_RDONLY);
         if (fd < 0)
@@ -60,12 +59,12 @@ int get_temp_id()
 
 void get_topology(CpuMon *cpumon)
 {
-    int total_threads = get_nprocs(); 
+    int total_threads = get_nprocs();
     if (total_threads <= 0)
         total_threads = 1;
 
     cpumon->thread_count = (uint16_t)total_threads;
-    
+
     cpumon->threads_per_core = 1;
     cpumon->phy_count = cpumon->thread_count;
 
@@ -73,7 +72,7 @@ void get_topology(CpuMon *cpumon)
     if (fd < 0)
         return;
 
-    char buf[2048]; 
+    char buf[2048];
     ssize_t bytes_read = read(fd, buf, sizeof(buf) - 1);
     close(fd);
 
@@ -172,7 +171,7 @@ static inline uint8_t calc_core_usage
 {
     uint64_t virt_idle = idle + iowait;
     uint64_t virt_work = user + nice + system + irq + softirq + steal;
-    
+
     uint64_t total = virt_idle + virt_work;
     uint64_t diff_total = total - *prev_total;
     uint64_t diff_idle  = virt_idle - *prev_idle;
@@ -223,14 +222,14 @@ void parse_stats(CpuMon* cpumon)
         uint8_t usage = calc_core_usage
         (
             user, nice, system, idle, iowait, irq, softirq, steal,
-            &cpumon->prev_total[cpu_id], 
+            &cpumon->prev_total[cpu_id],
             &cpumon->prev_idle[cpu_id]
         );
 
         cpumon->usage[cpu_id] = usage;
-        
+
         push_to_history(cpumon, cpu_id, usage);
     }
-    
+
     cpumon->graph_head = (cpumon->graph_head + 1) % cpumon->graph_width;
 }

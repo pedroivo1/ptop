@@ -42,7 +42,7 @@ static inline void skip_line(char **p)
 
 static inline uint64_t read_sysfs_uint64(int fd)
 {
-    char buf[64]; 
+    char buf[64];
     ssize_t bytes_read = pread(fd, buf, sizeof(buf) - 1, 0);
 
     if (bytes_read > 0)
@@ -150,7 +150,7 @@ static inline void append_fixed_1d(char **buf, uint64_t val, uint64_t divisor)
 
     uint64_t remainder = val % divisor;
     uint64_t digit = (remainder * 10) / divisor;
-    
+
     *(*buf)++ = (char)('0' + digit);
 }
 
@@ -164,7 +164,7 @@ static inline void append_fixed_2d(char **buf, uint64_t val, uint64_t divisor)
 
     if (frac < 10)
         *(*buf)++ = '0';
-    
+
     append_u64_base(buf, frac);
 }
 
@@ -185,7 +185,7 @@ static inline void append_fixed_shift_2d(char **buf, uint64_t val, uint64_t shif
     *(*buf)++ = '.';
 
     uint64_t mask = ((uint64_t)1 << shift) - 1;
-    
+
     uint64_t frac = ((val & mask) * 100) >> shift;
 
     if (frac < 10)
@@ -207,11 +207,11 @@ static inline void append_fixed_generic(char **buf, uint64_t val, uint64_t divis
     while (prec_mult > 1)
     {
         prec_mult /= 10;
-        
+
         remainder *= 10;
         uint64_t digit = remainder / divisor;
         remainder %= divisor;
-        
+
         *(*buf)++ = (char)('0' + digit);
     }
 }

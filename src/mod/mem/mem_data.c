@@ -1,8 +1,6 @@
 #include <unistd.h>
-
 #include "util/util.h"
-#include "modules/mem/mem.h"
-#include "ui/ui.h"
+#include "mod/mem/mem.h"
 #include "cfg/buf.h"
 
 void parse_mem(MemMon *memmon)

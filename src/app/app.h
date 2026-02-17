@@ -3,10 +3,8 @@
 
 #include <stdint.h>
 #include <signal.h>
-
-#include "modules/cpu/cpu.h"
-#include "modules/mem/mem.h"
-#include "util/rect.h"
+#include "mod/cpu/cpu.h"
+#include "mod/mem/mem.h"
 
 extern volatile sig_atomic_t g_signal_quit;
 

@@ -1,5 +1,4 @@
 #include <stdint.h>
-
 #include "ui/ui.h"
 #include "ui/term.h"
 #include "util/util.h"
@@ -7,7 +6,7 @@
 void draw_temp_ui(char **p, int x, int y)
 {
     tui_at(p, x, y);
-    APPEND_LIT(p, "  °C");
+    APPEND_LIT(p, TX_DIM1 BOX_TR TX_FONT "  °C" TX_DIM1 BOX_TL);
 }
 
 void draw_temp_data(char **p, int x, int y, int temp)
@@ -30,7 +29,7 @@ void draw_temp_data(char **p, int x, int y, int temp)
 void draw_freq_ui(char **p, int x, int y)
 {
     tui_at(p, x, y);
-    APPEND_LIT(p, "    GHz");
+    APPEND_LIT(p, TX_DIM1 BOX_TR TX_FONT "    GHz" TX_DIM1 BOX_TL);
 }
 
 void draw_freq_data(char **p, int x, int y, int mhz)
@@ -123,7 +122,7 @@ void draw_uptime_data(char **p, int x, int y, int uptime)
 
     *(*p)++ = ':';
     append_two_digits(p, mins);
-    
+
     *(*p)++ = ':';
     append_two_digits(p, secs);
 }
