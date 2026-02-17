@@ -11,7 +11,7 @@ void get_freq_mhz(CpuMon *cpumon);
 void get_temp_c(CpuMon *cpumon);
 void parse_stats(CpuMon *cpumon);
 void get_load_avg(CpuMon *cpumon);
-int get_temp_id(void);
+int get_temp_id();
 
 // --- FRONTEND ---
 // UI 

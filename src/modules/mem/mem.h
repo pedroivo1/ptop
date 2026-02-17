@@ -1,7 +1,7 @@
 #ifndef MEM_H
 #define MEM_H
 
-#include "common/rect.h"
+#include "util/rect.h"
 
 typedef struct
 {

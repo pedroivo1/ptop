@@ -3,16 +3,16 @@
 #include <unistd.h>
 #include <string.h>
 
-#include "common/cfg.h"
-#include "common/utils.h"
+#include "util/util.h"
 #include "ui/ui.h"
 #include "ui/term.h"
+#include "cfg/path.h"
 #include "modules/mem/mem_internal.h"
 
 void init_mem(MemMon *memmon)
 {
     memset(memmon, 0, sizeof(*memmon));
-    memmon->fd_mem = open(MEM_PATH, O_RDONLY);
+    memmon->fd_mem = open(MEMINFO, O_RDONLY);
 }
 
 void deinit_mem(MemMon *memmon)

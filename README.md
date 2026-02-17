@@ -6,9 +6,9 @@
 ![Language](https://img.shields.io/badge/-C11-blue)
 ![Usage](https://img.shields.io/badge/Usage-System_resource_monitor-yellow)
 
-**ptop** (personal tabel of processes) é um monitor de recursos de sistema focado em performance. Escrito em C puro, sem dependências externas além da biblioteca padrão.
+Personal Tabel of Processes (**ptop**) é um monitor de recursos de sistema focado em performance. Escrito em C, sem dependências externas além da biblioteca padrão.
 
-Inspirado na estética do [btop](https://github.com/aristocratos/btop), mas arquitetado para ser leve, modular e eficiente.
+Inspirado na estética do [btop](https://github.com/aristocratos/btop).
 
 | ptop (WIP) | btop (Original) |
 | :---: | :---: |

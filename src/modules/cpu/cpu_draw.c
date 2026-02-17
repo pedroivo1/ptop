@@ -2,7 +2,7 @@
 
 #include "ui/ui.h"
 #include "ui/term.h"
-#include "common/utils.h"
+#include "util/util.h"
 
 void draw_temp_ui(char **p, int x, int y)
 {

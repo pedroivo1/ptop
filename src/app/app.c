@@ -4,18 +4,20 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
+#include <stdint.h>
 
 #include "app/app.h"
 #include "app/app_internal.h"
 #include "ui/ui.h"
 #include "ui/term.h"
-#include "common/cfg.h"
-#include "common/utils.h"
+#include "util/util.h"
+#include "cfg/buf.h"
 
 void app_init(AppContext *ctx)
 {
     memset(ctx, 0, sizeof(*ctx));
 
+    ctx->delay = 500;
     ctx->running = 1;
     ctx->show_cpu = 1;
     ctx->show_mem = 1;
@@ -39,7 +41,7 @@ void app_destroy(AppContext *ctx)
 
 void app_run(AppContext *ctx)
 {
-    size_t buf_len = OUT_BUFF_LEN;
+    size_t buf_len = WRITE_BUF_LEN;
     char *buf = malloc(buf_len);
     if (!buf)
     {
@@ -58,7 +60,7 @@ void app_run(AppContext *ctx)
 
         now = current_time_ms();
 
-        int is_tick = (last_update_time == 0 || now - last_update_time >= DELAY_MS);
+        int is_tick = (last_update_time == 0 || now - last_update_time >= ctx->delay);
 
         if (is_tick)
         {
@@ -75,7 +77,7 @@ void app_run(AppContext *ctx)
         }
 
         int time_spent = (int)(current_time_ms() - last_update_time);
-        int time_to_wait = DELAY_MS - time_spent;
+        int time_to_wait = ctx->delay - time_spent;
         if (time_to_wait < 0) time_to_wait = 0;
 
         app_handle_input(ctx, time_to_wait);

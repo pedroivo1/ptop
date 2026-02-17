@@ -1,6 +1,6 @@
 #include <stdint.h>
 
-#include "common/utils.h"
+#include "util/util.h"
 #include "ui/ui.h"
 #include "theme/theme.h"
 

@@ -4,15 +4,16 @@
 #include <string.h>
 #include <unistd.h>
 
-#include "common/cfg.h"
-#include "common/utils.h"
+#include "util/util.h"
 #include "ui/ui.h"
 #include "ui/term.h"
+#include "cfg/path.h"
 #include "modules/cpu/cpu_internal.h"
 
 void init_cpu(CpuMon *cpumon)
 {
     memset(cpumon, 0, sizeof(*cpumon));
+    cpumon->graph_width = 21;
 
     get_topology(cpumon);
 
@@ -26,27 +27,27 @@ void init_cpu(CpuMon *cpumon)
     cpumon->usage = calloc(cpumon->thread_count, sizeof(*cpumon->usage));
     cpumon->fd_freq = calloc(cpumon->phy_count, sizeof(*cpumon->fd_freq));
 
-    cpumon->graph_hist = calloc(cpumon->thread_count * GRAPH_WIDTH, sizeof(uint8_t));
+    cpumon->graph_hist = calloc(cpumon->thread_count * cpumon->graph_width, sizeof(uint8_t));
 
-    cpumon->fd_stat = open(STAT_PATH, O_RDONLY);
+    cpumon->fd_stat = open(STAT, O_RDONLY);
 
     int hwmon_cpu_id = get_temp_id();
     char path[128];
     char *p = path;
-    APPEND_LIT(&p, "/sys/class/hwmon/hwmon");
+    APPEND_LIT(&p, HWMON_DIR HWMON);
     append_num(&p, hwmon_cpu_id);
-    APPEND_LIT(&p, "/temp");
+    APPEND_LIT(&p, HWMON_TEMP);
     append_num(&p, 1);
-    APPEND_LIT(&p, "_input");
+    APPEND_LIT(&p, HWMON_INPUT);
     *p = '\0';
     cpumon->fd_temp = open(path, O_RDONLY);
 
     for (size_t i = 0; i < cpumon->phy_count; i++)
     {
         p = path;
-        APPEND_LIT(&p, "/sys/devices/system/cpu/cpu");
+        APPEND_LIT(&p, SYS_CPU_BASE);
         append_num(&p, i);
-        APPEND_LIT(&p, "/cpufreq/scaling_cur_freq");
+        APPEND_LIT(&p, CPU_FREQ_FILE);
         *p = '\0';
         cpumon->fd_freq[i] = open(path, O_RDONLY);
     }
@@ -83,12 +84,10 @@ void recalc_cpu(CpuMon *cpumon)
 {
     const uint16_t BORDER_PADDING = 1;
     
-    // Tamanhos fixos dos elementos
-    const uint16_t LABEL_LEN = 4; // "C0  "
-    const uint16_t USAGE_LEN = 5; // " 100%"
+    const uint16_t LABEL_LEN = 4;
+    const uint16_t USAGE_LEN = 5;
     
-    // Calcula a largura IDEAL de uma coluna baseada no seu macro GRAPH_WIDTH
-    const uint16_t IDEAL_COL_WIDTH = LABEL_LEN + GRAPH_WIDTH + USAGE_LEN;
+    const uint16_t IDEAL_COL_WIDTH = LABEL_LEN + cpumon->graph_width + USAGE_LEN;
 
     // --- ROWS ---
     uint16_t rows = cpumon->rect.h - (BORDER_PADDING * 4);
@@ -99,28 +98,22 @@ void recalc_cpu(CpuMon *cpumon)
 
     // --- COLUMNS ---
     uint16_t cols = (cpumon->thread_count + rows - 1) / rows;
-    
+
+    // --- ROWS ITERATIONS ---
+    rows = (cpumon->thread_count + cols - 1) / cols;
+
     // --- WIDTH ---
     uint16_t gaps = (cols > 0) ? (cols - 1) : 0;
-    uint16_t exact_w = (cols * IDEAL_COL_WIDTH) + gaps + 2; // +2 das bordas
-
     uint16_t max_allowed_w = cpumon->rect.w / 2;
 
-    uint16_t table_w = exact_w;
+    uint16_t table_w = (cols * IDEAL_COL_WIDTH) + gaps + 2;
     if (table_w > max_allowed_w) {
         table_w = max_allowed_w;
     }
 
     // --- HEIGHT ---
     uint16_t table_h = 0;
-    if (cols == 1 && rows < cpumon->rect.h - 2)
-    {
-        table_h = rows + (BORDER_PADDING); 
-    }
-    else
-    {
-        table_h = cpumon->rect.h - 2; 
-    }
+    table_h = rows + (BORDER_PADDING*2); 
 
     // --- RECT ---
     uint16_t table_x = cpumon->rect.x + cpumon->rect.w - table_w - 1;
@@ -208,10 +201,10 @@ void draw_cpu_data(CpuMon* cpumon, char **p)
 
         tui_at(p, bx + 4 + padding_left, by);
 
-        uint8_t *core_hist_ptr = &cpumon->graph_hist[i * GRAPH_WIDTH];
-        
+        uint8_t *core_hist_ptr = &cpumon->graph_hist[i * cpumon->graph_width];
+
         tui_draw_graph(p, core_hist_ptr, draw_w, cpumon->graph_head);
-        
+
         draw_usage_data(p, cpumon->usage[i]);
     }
 

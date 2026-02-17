@@ -5,7 +5,9 @@
 #include "app.h"
 #include "app_internal.h"
 #include "ui/ui.h"
+#include "ui/term.h"
 #include "modules/cpu/cpu.h"
+#include "modules/mem/mem.h"
 
 void app_update_layout(AppContext *ctx)
 {
@@ -19,7 +21,6 @@ void app_update_layout(AppContext *ctx)
     if (ctx->show_cpu && ctx->show_mem)
     {
         int split_h = h - 7;
-        if (split_h < 10) split_h = h / 2;
 
         ctx->cpu.rect = (Rect){margin, margin, w, split_h};
         ctx->mem.rect = (Rect){margin, margin + split_h, w, h - split_h};

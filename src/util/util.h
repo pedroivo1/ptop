@@ -1,5 +1,5 @@
-#ifndef UTILS_H
-#define UTILS_H
+#ifndef UTIL_H
+#define UTIL_H
 
 #include <string.h>
 #include <unistd.h>
@@ -10,9 +10,7 @@
 
 static inline uint64_t current_time_ms() {
     struct timespec ts;
-    
     timespec_get(&ts, TIME_UTC);
-    
     return (uint64_t)(ts.tv_sec * 1000 + ts.tv_nsec / 1000000);
 }
 
@@ -79,7 +77,8 @@ static inline void append_u64_base(char **buf, uint64_t val)
         unsigned int index = (val % 100) << 1;
         val /= 100;
         p -= 2;
-        *(uint16_t*)p = *(uint16_t*)&g_digits_lut[index];
+        p[0] = g_digits_lut[index];
+        p[1] = g_digits_lut[index + 1];
     }
 
     if (val < 10)
@@ -88,7 +87,8 @@ static inline void append_u64_base(char **buf, uint64_t val)
     {
         unsigned int index = val << 1;
         p -= 2;
-        *(uint16_t*)p = *(uint16_t*)&g_digits_lut[index];
+        p[0] = g_digits_lut[index];
+        p[1] = g_digits_lut[index + 1];
     }
 
     size_t len = (temp + 24) - p;
@@ -101,7 +101,7 @@ static inline void append_i64_base(char **buf, int64_t val)
     if (val < 0)
     {
         *(*buf)++ = '-';
-        append_u64_base(buf, -(uint64_t)val);
+        append_u64_base(buf, (uint64_t)(-val));
     }
     else
         append_u64_base(buf, (uint64_t)val);

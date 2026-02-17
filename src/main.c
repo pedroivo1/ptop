@@ -5,10 +5,9 @@
 #include <time.h>
 #include <stdlib.h>
 
-#include "app/app.h"
-#include "common/utils.h"
+#include "util/util.h"
 #include "ui/ui.h"
-#include "common/cfg.h"
+#include "app/app.h"
 
 volatile sig_atomic_t g_signal_quit = 0;
 

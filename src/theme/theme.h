@@ -1,8 +1,7 @@
 #ifndef THEME_H
 #define THEME_H
 
-// Selecione o tema aqui
-#include "palette/light.h"
+#include "palette/dark.h"
 
 // --- HELPER MACROS ---
 #define ESC_FG(id)          "\033[38;5;" id "m"
@@ -42,8 +41,8 @@
 #define TG_TEMP_11     ESC_FG(PAL_T11)
 #define TG_TEMP_12     ESC_FG(PAL_T12)
 #define TG_TEMP_13     ESC_FG(PAL_T13)
-#define TG_TEMP_14     ESC_FG(PAL_T14) // Restaurado
-#define TG_TEMP_15     ESC_FG(PAL_T15) // Restaurado
+#define TG_TEMP_14     ESC_FG(PAL_T14)
+#define TG_TEMP_15     ESC_FG(PAL_T15)
 
 // --- TG: PERCENTAGE GRADIENT (0-7) ---
 #define TG_P0          ESC_FG(PAL_P0)

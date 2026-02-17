@@ -2,9 +2,9 @@
 #define CPU_H
 
 #include <stddef.h>
-#include <stddef.h>
+#include <stdint.h>
 
-#include "common/rect.h"
+#include "util/rect.h"
 
 typedef struct
 {
@@ -39,6 +39,7 @@ typedef struct
     uint8_t threads_per_core;
     int8_t temp;
     uint8_t graph_head;
+    uint8_t graph_width;
 
 } CpuMon;
 

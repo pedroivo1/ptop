@@ -2,7 +2,7 @@
 #include "app_internal.h"
 #include "ui/ui.h"
 #include "ui/term.h"
-#include "common/utils.h"
+#include "util/util.h"
 
 int app_draw(AppContext *ctx, char *buf)
 {

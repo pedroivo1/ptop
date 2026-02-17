@@ -2,7 +2,7 @@
 #define TUI_H
 
 #include <stdint.h>
-#include "common/utils.h"
+#include "util/util.h"
 #include "theme/theme.h"
 
 // --- BRAILE DOTS ---

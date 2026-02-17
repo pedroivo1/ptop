@@ -6,12 +6,12 @@
 #include <sys/sysinfo.h>
 
 #include "modules/cpu/cpu.h"
-#include "common/utils.h"
-#include "common/cfg.h"
+#include "util/util.h"
+#include "cfg/path.h"
 
-int get_temp_id(void)
+int get_temp_id()
 {
-    DIR *dir = opendir("/sys/class/hwmon");
+    DIR *dir = opendir(HWMON_DIR);
     if (!dir)
         return -1;
 
@@ -23,13 +23,13 @@ int get_temp_id(void)
 
     while ((entry = readdir(dir)) != NULL)
     {
-        if (entry->d_name[0] == '.' || strncmp(entry->d_name, "hwmon", 5) != 0)
+        if (entry->d_name[0] == '.' || strncmp(entry->d_name, HWMON, sizeof(HWMON) - 1) != 0)
             continue;
 
         p = path;
-        APPEND_LIT(&p, "/sys/class/hwmon/");
+        APPEND_LIT(&p, HWMON_DIR);
         append_str(&p, entry->d_name);
-        APPEND_LIT(&p, "/name");
+        APPEND_LIT(&p, HWMON_PER);
         *p = '\0'; 
 
         int fd = open(path, O_RDONLY);
@@ -44,7 +44,7 @@ int get_temp_id(void)
             buf[n] = '\0';
             if (buf[n-1] == '\n') buf[n-1] = '\0';
 
-            if (strcmp(buf, CORE_LABEL_NAME) == 0)
+            if (strcmp(buf, CORETEMP) == 0)
             {
                 char *p_num = entry->d_name;
                 skip_to_digit(&p_num);
@@ -65,9 +65,11 @@ void get_topology(CpuMon *cpumon)
         total_threads = 1;
 
     cpumon->thread_count = (uint16_t)total_threads;
+    
     cpumon->threads_per_core = 1;
+    cpumon->phy_count = cpumon->thread_count;
 
-    int fd = open("/proc/cpuinfo", O_RDONLY);
+    int fd = open(CPUINFO, O_RDONLY);
     if (fd < 0)
         return;
 
@@ -86,12 +88,12 @@ void get_topology(CpuMon *cpumon)
 
     while (*p)
     {
-        if (*p == 's' && strncmp(p, "siblings", 8) == 0)
+        if (*p == 's' && strncmp(p, THREADS, sizeof(THREADS) - 1) == 0)
         {
             skip_to_digit(&p);
             siblings = (int)str_to_uint64(&p);
         }
-        else if (*p == 'c' && strncmp(p, "cpu cores", 9) == 0)
+        else if (*p == 'c' && strncmp(p, CORES, sizeof(CORES) - 1) == 0)
         {
             skip_to_digit(&p);
             phy_cores = (int)str_to_uint64(&p);
@@ -107,15 +109,17 @@ void get_topology(CpuMon *cpumon)
         skip_line(&p);
     }
 
-    if (siblings <= 0)
-        siblings = total_threads;
-    if (phy_cores <= 0)
-        phy_cores = siblings;
+    int threads_per_core = 1;
 
-    cpumon->phy_count = (uint16_t)phy_cores;
+    if (siblings > 0 && phy_cores > 0)
+    {
+        threads_per_core = siblings / phy_cores;
+        if (threads_per_core < 1)
+            threads_per_core = 1;
+    }
 
-    if (phy_cores > 0)
-        cpumon->threads_per_core = (uint16_t)(siblings / phy_cores);
+    cpumon->threads_per_core = (uint16_t)threads_per_core;
+    cpumon->phy_count = cpumon->thread_count / cpumon->threads_per_core;
 }
 
 void get_temp_c(CpuMon *cpumon)
@@ -159,10 +163,12 @@ void get_load_avg(CpuMon *cpumon)
     }
 }
 
-static inline uint8_t calc_core_usage(
+static inline uint8_t calc_core_usage
+(
     uint64_t user, uint64_t nice, uint64_t system, uint64_t idle,
     uint64_t iowait, uint64_t irq, uint64_t softirq, uint64_t steal,
-    uint64_t *prev_total, uint64_t *prev_idle)
+    uint64_t *prev_total, uint64_t *prev_idle
+)
 {
     uint64_t virt_idle = idle + iowait;
     uint64_t virt_work = user + nice + system + irq + softirq + steal;
@@ -182,7 +188,7 @@ static inline uint8_t calc_core_usage(
 
 static inline void push_to_history(CpuMon *cpumon, int cpu_id, uint8_t usage)
 {
-    int idx = (cpu_id * GRAPH_WIDTH) + cpumon->graph_head;
+    int idx = (cpu_id * cpumon->graph_width) + cpumon->graph_head;
     cpumon->graph_hist[idx] = usage;
 }
 
@@ -214,7 +220,8 @@ void parse_stats(CpuMon* cpumon)
 
         skip_line(&p);
 
-        uint8_t usage = calc_core_usage(
+        uint8_t usage = calc_core_usage
+        (
             user, nice, system, idle, iowait, irq, softirq, steal,
             &cpumon->prev_total[cpu_id], 
             &cpumon->prev_idle[cpu_id]
@@ -225,5 +232,5 @@ void parse_stats(CpuMon* cpumon)
         push_to_history(cpumon, cpu_id, usage);
     }
     
-    cpumon->graph_head = (cpumon->graph_head + 1) % GRAPH_WIDTH;
+    cpumon->graph_head = (cpumon->graph_head + 1) % cpumon->graph_width;
 }
