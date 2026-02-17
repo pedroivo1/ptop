@@ -8,22 +8,23 @@
 #include "ui/ui.h"
 #include "ui/term.h"
 
-const char *gradient_temp[16] =
-{
-    TG_TEMP_0, TG_TEMP_1, TG_TEMP_2, TG_TEMP_3, TG_TEMP_4,
-    TG_TEMP_5, TG_TEMP_6, TG_TEMP_7, TG_TEMP_8, TG_TEMP_9,
-    TG_TEMP_10, TG_TEMP_11, TG_TEMP_12, TG_TEMP_13,
-    TG_TEMP_14, TG_TEMP_15
-};
-
 const char *dots_braille[8] =
 {
     DOTS_1, DOTS_2, DOTS_3, DOTS_4, DOTS_5, DOTS_6, DOTS_7, DOTS_8
 };
 
+const char *gradient_temp[16] =
+{
+    theme.temp[0], theme.temp[1], theme.temp[2], theme.temp[3],
+    theme.temp[4], theme.temp[5], theme.temp[6], theme.temp[7],
+    theme.temp[8], theme.temp[9], theme.temp[10], theme.temp[11],
+    theme.temp[12], theme.temp[13], theme.temp[14], theme.temp[15]
+};
+
 const char *gradient_perc[8] =
 {
-    TG_P0, TG_P1, TG_P2, TG_P3, TG_P4, TG_P5, TG_P6, TG_P7
+    theme.pct[0], theme.pct[1], theme.pct[2], theme.pct[3],
+    theme.pct[4], theme.pct[5], theme.pct[6], theme.pct[7]
 };
 
 static struct termios original_term;
@@ -53,20 +54,14 @@ void tui_update_size()
     }
 }
 
-void tui_begin_frame(char **p, int *resized)
+void tui_begin_frame(int *resized)
 {
     if (win_resized)
     {
         tui_update_size();
-        APPEND_LIT(p, "\033[2J");
         win_resized = 0;
         if (resized)
             *resized = 1;
-    }
-    else
-    {
-        if (resized)
-            *resized = 0;
     }
 }
 
@@ -169,7 +164,7 @@ void tui_draw_graph(char **p, uint8_t *data, int len, int head)
         {
             if (last_dot_idx != -1)
             {
-                APPEND_LIT(p, TX_DIM0);
+                append_str(p, theme.dim_dark);
                 last_dot_idx = -1;
             }
         }

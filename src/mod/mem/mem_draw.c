@@ -13,31 +13,32 @@ void draw_meter(char **p, int x, int y, int w, const char *label, const char *co
 
     tui_at(p, x, y);
 
-    append_str(p, TX_FONT);
+    append_str(p, theme.fg);
     append_str(p, label);
     *(*p)++ = ':';
 
     if (perc < 100)
     {
-        APPEND_LIT(p, " ");
+        *(*p)++ = ' ';
         if (perc < 10)
-            APPEND_LIT(p, " ");
+            *(*p)++ = ' ';
     }
 
     append_str(p, color_bar);
     append_num(p, perc);
-    APPEND_LIT(p, " %");
+    *(*p)++ = '%';
 
     int fill = (bar_w * perc) / 100;
     for (int i = 0; i < fill; i++)
         *(*p)++ = '|';
-    APPEND_LIT(p, TX_DIM0);
+    append_str(p, theme.dim_dark);
     for (int i = fill; i < bar_w; i++)
         *(*p)++ = '|';
 
-    APPEND_LIT(p, TX_FONT " ");
+    append_str(p, theme.fg);
+    *(*p)++ = ' ';
     append_fixed_shift_2d(p, val_kb, 20);
     if (val_kb < 10485760)
-        APPEND_LIT(p, " ");
+        *(*p)++ = ' ';
     APPEND_LIT(p, " GiB");
 }

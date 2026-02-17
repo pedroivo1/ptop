@@ -129,9 +129,9 @@ static void handle_keyboard(AppContext *ctx, char key)
 {
     switch (key)
     {
+        case 0x03: // CTRL+C
         case 'q':
         case 'Q':
-        case 0x03: // CTRL+C
             ctx->running = 0;
             break;
         case '1':
@@ -142,7 +142,13 @@ static void handle_keyboard(AppContext *ctx, char key)
             ctx->show_mem = !ctx->show_mem;
             app_update_layout(ctx);
             break;
+        case 't':
+        case 'T':
+            theme_toggle();
+            ctx->force_redraw = 1;
+            break;
         case 'r':
+        case 'R':
             ctx->force_redraw = 1;
             break;
     }

@@ -3,6 +3,7 @@
 #include "ui/ui.h"
 #include "ui/term.h"
 #include "util/util.h"
+#include "theme/theme.h"
 #include "mod/cpu/cpu.h"
 #include "mod/mem/mem.h"
 
@@ -12,18 +13,21 @@ int app_draw(AppContext *ctx, char *buf)
     char *p = buf;
     int physical_resize = 0;
 
-    tui_begin_frame(&p, &physical_resize);
+    tui_begin_frame(&physical_resize);
 
-    if (physical_resize) {
+    if (physical_resize)
+    {
         ctx->needs_resize = 1;
         app_update_layout(ctx);
     }
 
-    if (ctx->force_redraw && !ctx->needs_resize) {
+    int draw_static = ctx->force_redraw || ctx->needs_resize;
+
+    if (draw_static)
+    {
+        append_str(&p, theme.bg);
         APPEND_LIT(&p, "\033[2J");
     }
-
-    int draw_static = ctx->force_redraw || ctx->needs_resize;
 
     if (ctx->show_cpu)
     {
@@ -57,12 +61,17 @@ void draw_delay_ctl(AppContext *ctx, char **p)
     int y = 1;
 
     tui_at(p, x, y);
-    
-    APPEND_LIT(p, TC_CPU_BD BOX_TR TX_FONT "- ");
+
+    append_str(p, theme.cpu_bd);
+    APPEND_LIT(p, BOX_TR);
+    append_str(p, theme.fg);
+    APPEND_LIT(p, "- ");
 
     append_num(p, ctx->delay);
     APPEND_LIT(p, "ms");
 
-    APPEND_LIT(p, " +" TC_CPU_BD BOX_TL TX_FONT);
-
+    APPEND_LIT(p, " +");
+    append_str(p, theme.cpu_bd);
+    APPEND_LIT(p, BOX_TL);
+    append_str(p, theme.fg);
 }

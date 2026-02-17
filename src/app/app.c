@@ -22,7 +22,8 @@ void app_init(AppContext *ctx)
     ctx->show_mem = 1;
     ctx->needs_resize = 1;
 
-    tui_setup(TX_BG, TX_FONT);
+    tui_setup(theme.bg, theme.fg);
+    theme_init();
 
     init_cpu(&ctx->cpu);
     init_mem(&ctx->mem);

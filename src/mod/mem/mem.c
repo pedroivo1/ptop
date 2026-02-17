@@ -31,8 +31,8 @@ void draw_mem_ui(MemMon *memmon, char **p)
     int h = memmon->rect.h;
 
     // --- MAIN BOX ---
-    tui_draw_box(p, x, y, w, h, TC_MEM_BD);
-    APPEND_LIT(p, TX_FONT);
+    tui_draw_box(p, x, y, w, h, theme.mem_bd);
+    append_str(p, theme.fg);
 }
 
 void draw_mem_data(MemMon *memmon, char **p)
@@ -58,8 +58,8 @@ void draw_mem_data(MemMon *memmon, char **p)
     int p_cached = (memmon->cached * 100) / memmon->total;
     int p_free   = (memmon->free   * 100) / memmon->total;
 
-    draw_meter(p, start_x, current_y++, inner_w, "Used ", TC_MEM_USED,  p_used,   memmon->used);
-    draw_meter(p, start_x, current_y++, inner_w, "Avail", TC_MEM_AVAIL, p_avail,  memmon->available);
-    draw_meter(p, start_x, current_y++, inner_w, "Cache", TC_MEM_CACHE, p_cached, memmon->cached);
-    draw_meter(p, start_x, current_y++, inner_w, "Free ", TC_MEM_FREE,  p_free,   memmon->free);
+    draw_meter(p, start_x, current_y++, inner_w, "Used ", theme.pct[6],  p_used,   memmon->used);
+    draw_meter(p, start_x, current_y++, inner_w, "Avail", theme.pct[0], p_avail,  memmon->available);
+    draw_meter(p, start_x, current_y++, inner_w, "Cache", theme.pct[4], p_cached, memmon->cached);
+    draw_meter(p, start_x, current_y++, inner_w, "Free ", theme.mem_free,  p_free,   memmon->free);
 }

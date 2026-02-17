@@ -2,17 +2,22 @@
 #include "ui/ui.h"
 #include "ui/term.h"
 #include "util/util.h"
-
+#include "theme/theme.h"
 void draw_temp_ui(char **p, int x, int y)
 {
     tui_at(p, x, y);
-    APPEND_LIT(p, TX_DIM1 BOX_TR TX_FONT "  °C" TX_DIM1 BOX_TL);
+    append_str(p, theme.dim);
+    APPEND_LIT(p, BOX_TR);
+    append_str(p, theme.fg);
+    APPEND_LIT(p, "  °C");
+    append_str(p, theme.dim);
+    APPEND_LIT(p, BOX_TL);
 }
 
 void draw_temp_data(char **p, int x, int y, int temp)
 {
     tui_at(p, x, y);
-    APPEND_LIT(p, TX_BOLD);
+    append_str(p, theme.tx_bold);
 
     int t_idx = (temp + 128) >> 4;
     if (t_idx < 0)
@@ -20,33 +25,38 @@ void draw_temp_data(char **p, int x, int y, int temp)
     if (t_idx > 15)
         t_idx = 15;
 
-    append_str(p, gradient_temp[t_idx]);
+    append_str(p, theme.temp[t_idx]);
     append_num(p, temp);
 
-    APPEND_LIT(p, TX_FONT TX_NOBOLD);
+    append_str(p, theme.fg);
+    append_str(p, theme.tx_nobold);
 }
 
 void draw_freq_ui(char **p, int x, int y)
 {
     tui_at(p, x, y);
-    APPEND_LIT(p, TX_DIM1 BOX_TR TX_FONT "    GHz" TX_DIM1 BOX_TL);
+    append_str(p, theme.dim);
+    APPEND_LIT(p, BOX_TR);
+    APPEND_LIT(p, theme.fg);
+    APPEND_LIT(p, "    GHz");
+    append_str(p, theme.dim);
+    APPEND_LIT(p, BOX_TL);
 }
 
 void draw_freq_data(char **p, int x, int y, int mhz)
 {
     tui_at(p, x, y);
-    APPEND_LIT(p, TX_BOLD);
-
+    append_str(p, theme.tx_bold);
     append_fixed_1d(p, mhz, 1000);
-
-    APPEND_LIT(p, TX_NOBOLD);
+    append_str(p, theme.tx_nobold);
 }
 
 void draw_label_ui(char **p, int id)
 {
-    APPEND_LIT(p, TX_BOLD "C");
+    append_str(p, theme.tx_bold);
+    APPEND_LIT(p, "C");
     append_num(p, id);
-    APPEND_LIT(p, TX_NOBOLD);
+    append_str(p, theme.tx_nobold);
 
     *(*p)++ = ' ';
     if (id < 10)
@@ -65,9 +75,9 @@ void draw_usage_data(char **p, int usage)
 {
     *(*p)++ = ' ';
     if (usage)
-        append_str(p, gradient_perc[(usage >> 4) & 7]);
+        append_str(p, theme.pct[(usage >> 4) & 7]);
     else
-        APPEND_LIT(p, TX_DIM1);
+        append_str(p, theme.dim);
 
     if (usage < 100)
     {
@@ -93,12 +103,12 @@ void draw_load_avg_data(char **p, int x, int y, uint32_t avg[3])
         uint32_t l_idx = raw >> 16;
         if (l_idx > 7) l_idx = 7;
 
-        append_str(p, gradient_perc[l_idx]);
+        append_str(p, theme.pct[l_idx]);
         append_fixed_shift_2d(p, raw, 16);
         if (k < 2)
             *(*p)++ = ' ';
     }
-    APPEND_LIT(p, TX_FONT);
+    append_str(p, theme.fg);
 }
 
 void draw_uptime_ui(char **p, int x, int y)

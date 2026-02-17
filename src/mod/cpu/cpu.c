@@ -148,13 +148,13 @@ void draw_cpu_ui(CpuMon *cpumon, char **p)
     Rect rt = cpumon->r_table;
 
     // --- MAIN BOX ---
-    tui_draw_box(p, r.x, r.y, r.w, r.h, TC_CPU_BD);
+    tui_draw_box(p, r.x, r.y, r.w, r.h, theme.cpu_bd);
 
     // --- TABLE BOX ---
-    tui_draw_box(p, rt.x, rt.y, rt.w, rt.h, TX_DIM1);
+    tui_draw_box(p, rt.x, rt.y, rt.w, rt.h, theme.dim);
     draw_temp_ui(p, rt.x + 2, rt.y);
     draw_freq_ui(p, rt.x + 9, rt.y);
-    APPEND_LIT(p, TX_FONT);
+    append_str(p, theme.fg);
 
     for (int i = 0; i < cpumon->thread_count; i++)
     {
@@ -171,7 +171,9 @@ void draw_cpu_ui(CpuMon *cpumon, char **p)
                 tui_at(p, bx - 2, by);
             else
                 tui_at(p, bx - 1, by); 
-            APPEND_LIT(p, TX_DIM1 BOX_V TX_FONT);
+            append_str(p, theme.dim);
+            APPEND_LIT(p, BOX_V);
+            append_str(p, theme.fg);
         }
 
         tui_at(p, bx, by);
@@ -221,7 +223,7 @@ void draw_cpu_data(CpuMon* cpumon, char **p)
         draw_usage_data(p, cpumon->usage[i]);
     }
 
-    APPEND_LIT(p, TX_FONT);
+    append_str(p, theme.fg);
     draw_uptime_data(p, cpumon->rect.x + 5, cpumon->rect.y + 1, cpumon->uptime);
     draw_load_avg_data(p, cpumon->rect.x + 6, cpumon->rect.y + cpumon->rect.h - 2, cpumon->load_avg);
 }

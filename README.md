@@ -35,6 +35,7 @@ make release
 | `q` | Sair |
 | `1` | Ligar/Desligar CPU |
 | `2` | Ligar/Desligar Memória |
+| `t` | Trocar Tema |
 | `r` | Forçar Redesenho |
 
 ## License

@@ -23,9 +23,9 @@
 #define BOX_H  "─"
 #define BOX_V  "│"
 
-extern const char* gradient_temp[16];
-extern const char* gradient_perc[8];
 extern const char* dots_braille[8];
+// extern const char* gradient_temp[16];
+// extern const char* gradient_perc[8];
 
 static inline void tui_at(char **p, int x, int y)
 {
@@ -47,7 +47,7 @@ void tui_draw_graph(char **p, uint8_t *data, int len, int head);
 extern int term_w;
 extern int term_h;
 void tui_handle_winch(int sig);
-void tui_begin_frame(char **p, int *resized);
+void tui_begin_frame(int *resized);
 void tui_update_size();
 
 #endif
