@@ -32,7 +32,14 @@ void draw_mem_ui(MemMon *memmon, char **p)
 
     // --- MAIN BOX ---
     tui_draw_box(p, x, y, w, h, theme.mem_bd);
+    
+    tui_at(p, memmon->rect.x + 2, memmon->rect.y + 1);
     append_str(p, theme.fg);
+    APPEND_LIT(p, "\033[1mRAM\033[22m Total: ");
+
+    append_fixed_shift_2d(p, memmon->total, 20);
+    APPEND_LIT(p, " GiB");
+
 }
 
 void draw_mem_data(MemMon *memmon, char **p)
@@ -42,14 +49,8 @@ void draw_mem_data(MemMon *memmon, char **p)
     int w = memmon->rect.w;
 
     int start_x = x + 2;
-    int current_y = y + 1;
+    int current_y = y + 2;
     int inner_w = w - 4;
-
-    tui_at(p, start_x, current_y++);
-    APPEND_LIT(p, "\033[1mRAM\033[22m Total: ");
-
-    append_fixed_shift_2d(p, memmon->total, 20);
-    APPEND_LIT(p, " GiB");
 
     if (memmon->total == 0) return;
 

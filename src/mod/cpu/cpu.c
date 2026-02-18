@@ -140,6 +140,14 @@ void recalc_cpu(CpuMon *cpumon)
     cpumon->table_cols = cols;
     cpumon->table_rows = rows;
     cpumon->col_width = candidate_col_w;
+
+    // --- MAIN GRAPH ---
+    cpumon->r_graph = (Rect){
+        .x = cpumon->rect.x + BORDER_PADDING * 2,
+        .y = cpumon->rect.y + BORDER_PADDING * 4,
+        .w = cpumon->rect.w - table_w - BORDER_PADDING * 4,
+        .h = cpumon->rect.h - BORDER_PADDING * 8
+    };
 }
 
 void draw_cpu_ui(CpuMon *cpumon, char **p)
@@ -218,7 +226,7 @@ void draw_cpu_data(CpuMon* cpumon, char **p)
 
         uint8_t *core_hist_ptr = &cpumon->graph_hist[i * cpumon->graph_width];
 
-        tui_draw_graph(p, core_hist_ptr, draw_w, cpumon->graph_head);
+        tui_draw_graph(p, core_hist_ptr, draw_w, cpumon->graph_width, cpumon->graph_head);
 
         draw_usage_data(p, cpumon->usage[i]);
     }
@@ -226,4 +234,7 @@ void draw_cpu_data(CpuMon* cpumon, char **p)
     append_str(p, theme.fg);
     draw_uptime_data(p, cpumon->rect.x + 5, cpumon->rect.y + 1, cpumon->uptime);
     draw_load_avg_data(p, cpumon->rect.x + 6, cpumon->rect.y + cpumon->rect.h - 2, cpumon->load_avg);
+
+    tui_at(p, cpumon->r_graph.x, cpumon->r_graph.y + cpumon->r_graph.h / 2);
+    tui_draw_graph_mirrored(p, cpumon->main_usage, 256, cpumon->main_graph_head, cpumon->r_graph);
 }

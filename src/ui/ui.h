@@ -3,6 +3,7 @@
 
 #include <stdint.h>
 #include "util/util.h"
+#include "util/rect.h"
 #include "theme/theme.h"
 
 // --- BRAILE DOTS ---
@@ -15,6 +16,15 @@
 #define DOTS_7   "\xE2\xA3\xBF"  // ⣿
 #define DOTS_8   "\xE2\xA3\xBF"  // ⣿
 
+#define INV_DOTS_1   "\xE2\xA0\x89"  // ⠉
+#define INV_DOTS_2   "\xE2\xA0\x8B"  // ⠋
+#define INV_DOTS_3   "\xE2\xA0\x9B"  // ⠛
+#define INV_DOTS_4   "\xE2\xA0\x9F"  // ⠟
+#define INV_DOTS_5   "\xE2\xA0\xBF"  // ⠿
+#define INV_DOTS_6   "\xE2\xA1\xBF"  // ⡿
+#define INV_DOTS_7   "\xE2\xA3\xBF"  // ⣿
+#define INV_DOTS_8   "\xE2\xA3\xBF"  // ⣿
+
 // --- BOX ---
 #define BOX_TL "┌"
 #define BOX_TR "┐"
@@ -24,8 +34,7 @@
 #define BOX_V  "│"
 
 extern const char* dots_braille[8];
-// extern const char* gradient_temp[16];
-// extern const char* gradient_perc[8];
+extern const char* dots_braille_inv[8];
 
 static inline void tui_at(char **p, int x, int y)
 {
@@ -42,7 +51,8 @@ void tui_restore();
 void tui_draw_box(char **p, int x, int y, int w, int h, char *color);
 void tui_draw_up_space(char **p, int x, int y, int len);
 void tui_draw_bottom_space(char **p, int x, int y, int len);
-void tui_draw_graph(char **p, uint8_t *data, int len, int head);
+void tui_draw_graph(char **p, uint8_t *data, int len, int capacity, int head);
+void tui_draw_graph_mirrored(char **p, uint8_t *data, int capacity, int head, Rect r);
 
 extern int term_w;
 extern int term_h;

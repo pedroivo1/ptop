@@ -7,10 +7,17 @@
 #include <sys/ioctl.h>
 #include "ui/ui.h"
 #include "ui/term.h"
+#include "util/rect.h"
 
 const char *dots_braille[8] =
 {
     DOTS_1, DOTS_2, DOTS_3, DOTS_4, DOTS_5, DOTS_6, DOTS_7, DOTS_8
+};
+
+const char *dots_braille_inv[8] =
+{
+    INV_DOTS_1, INV_DOTS_2, INV_DOTS_3, INV_DOTS_4,
+    INV_DOTS_5, INV_DOTS_6, INV_DOTS_7, INV_DOTS_8
 };
 
 const char *gradient_temp[16] =
@@ -151,12 +158,13 @@ void tui_draw_bottom_space(char **p, int x, int y, int len)
     APPEND_LIT(p, BOX_BL);
 }
 
-void tui_draw_graph(char **p, uint8_t *data, int len, int head)
+void tui_draw_graph(char **p, uint8_t *data, int len, int capacity, int head)
 {
     int last_dot_idx = -2;
     for (int i = 0; i < len; i++)
     {
-        int idx = (head + i) % len;
+        int idx = (head + capacity - len + i) % capacity;
+        
         uint8_t val = data[idx];
 
         int dot_idx = (val >> 4) & 7;
@@ -177,5 +185,97 @@ void tui_draw_graph(char **p, uint8_t *data, int len, int head)
             }
         }
         append_str(p, dots_braille[dot_idx]);
+    }
+}
+
+void tui_draw_graph_mirrored(char **p, uint8_t *data, int capacity, int head, Rect r)
+{
+    int center_y = r.h / 2;
+    int is_even_h = (r.h % 2 == 0);
+    
+    // Calcula a distância máxima baseada na metade MENOR para garantir simetria visual
+    // Se for ímpar (ex: Topo 30, Baixo 29), força o max_dist ser 29 para ambos.
+    int max_dist = (r.h - 1) / 2;
+    if (!is_even_h) max_dist = (r.h / 2) - 1; // Ajuste fino para simetria
+    
+    if (max_dist < 1) max_dist = 1;
+
+    int total_subpixels = (max_dist + 1) * 8;
+
+    for (int y = 0; y < r.h; y++)
+    {
+        tui_at(p, r.x, r.y + y);
+
+        int dist;
+        const char **current_dots;
+
+        // --- 1. Lógica de Direção ---
+        if (is_even_h) {
+            if (y < center_y) {
+                dist = (center_y - 1) - y;
+                current_dots = dots_braille;
+            } else {
+                dist = y - center_y;
+                current_dots = dots_braille_inv; 
+            }
+        } else {
+            // ALTURA ÍMPAR
+            if (y <= center_y) {
+                dist = center_y - y;
+                current_dots = dots_braille;
+            } else {
+                dist = y - center_y - 1; 
+                current_dots = dots_braille_inv;
+            }
+        }
+
+        // --- 2. Cor (Limitada a 6 para evitar Roxo/Branco) ---
+        // Usa bitshift para performance: (dist * 8) / max_dist
+        int color_idx = (dist << 3) / max_dist;
+        
+        // Se a sua paleta tem roxo no 7, travar no 6 mantém no vermelho/laranja
+        if (color_idx > 6) color_idx = 6; 
+
+        int row_start_pixel = dist * 8;
+        int row_end_pixel   = (dist + 1) * 8;
+
+        for (int x = 0; x < r.w; x++)
+        {
+            int idx = (head + capacity - r.w + x) % capacity;
+            uint8_t val = data[idx];
+            int needed_subpixels = (val * total_subpixels) / 100;
+
+            if (needed_subpixels >= row_end_pixel)
+            {
+                // Corpo Sólido
+                append_str(p, gradient_perc[color_idx]);
+                append_str(p, current_dots[7]);
+            }
+            else if (needed_subpixels > row_start_pixel)
+            {
+                // Ponta do Gráfico
+                int remainder = needed_subpixels - row_start_pixel;
+                int char_idx = remainder - 1;
+                
+                if (char_idx < 0) char_idx = 0;
+                if (char_idx > 7) char_idx = 7;
+
+                append_str(p, gradient_perc[color_idx]);
+                append_str(p, current_dots[char_idx]); 
+            }
+            else
+            {
+                // Linha de base contínua (mínimo verde no centro)
+                if (dist == 0)
+                {
+                    append_str(p, gradient_perc[0]); 
+                    append_str(p, current_dots[0]);  
+                }
+                else
+                {
+                    append_str(p, " ");
+                }
+            }
+        }
     }
 }

@@ -16,7 +16,7 @@ void app_init(AppContext *ctx)
 {
     memset(ctx, 0, sizeof(*ctx));
 
-    ctx->delay = 500;
+    ctx->delay = 200;
     ctx->running = 1;
     ctx->show_cpu = 1;
     ctx->show_mem = 1;

@@ -18,6 +18,9 @@ typedef struct
     char *stat_buffer;
     size_t stat_buffer_size;
 
+    uint64_t main_prev_total;
+    uint64_t main_prev_idle;
+
     uint32_t uptime;
     uint32_t load_avg[3];
 
@@ -30,6 +33,7 @@ typedef struct
 
     Rect rect;
     Rect r_table;
+    Rect r_graph;
 
     uint16_t table_cols;
     uint16_t table_rows;
@@ -41,6 +45,9 @@ typedef struct
     uint8_t graph_width;
 
     uint8_t is_compact;
+
+    uint8_t main_graph_head;
+    uint8_t main_usage[256];
 } CpuMon;
 
 void init_cpu(CpuMon *cpumon);

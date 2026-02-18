@@ -199,7 +199,31 @@ void parse_stats(CpuMon* cpumon)
 
     cpumon->stat_buffer[bytes_read] = '\0';
     char *p = cpumon->stat_buffer;
-    skip_line(&p);
+
+    if (*p == 'c')
+    {
+        skip_to_digit(&p);
+        skip_to_digit(&p); uint64_t user = str_to_uint64(&p);
+        skip_to_digit(&p); uint64_t nice = str_to_uint64(&p);
+        skip_to_digit(&p); uint64_t system = str_to_uint64(&p);
+        skip_to_digit(&p); uint64_t idle = str_to_uint64(&p);
+        skip_to_digit(&p); uint64_t iowait = str_to_uint64(&p);
+        skip_to_digit(&p); uint64_t irq = str_to_uint64(&p);
+        skip_to_digit(&p); uint64_t softirq = str_to_uint64(&p);
+        skip_to_digit(&p); uint64_t steal = str_to_uint64(&p);
+
+        skip_line(&p);
+
+        uint8_t global_usage = calc_core_usage
+        (
+            user, nice, system, idle, iowait, irq, softirq, steal,
+            &cpumon->main_prev_total,
+            &cpumon->main_prev_idle
+        );
+
+        cpumon->main_usage[cpumon->main_graph_head] = global_usage;
+        cpumon->main_graph_head = (cpumon->main_graph_head + 1) % 256; 
+    }
 
     for (size_t cpu_id = 0; cpu_id < cpumon->thread_count; cpu_id++)
     {
