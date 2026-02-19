@@ -3,11 +3,12 @@
 #include "mod/mem/mem.h"
 #include "cfg/buf.h"
 
-void parse_mem(MemMon *memmon)
-{
+void parse_mem(MemMon memmon[static 1]) {
     static char buf[MEM_STAT_BUF_LEN];
     ssize_t bytes_read = pread(memmon->fd_mem, buf, sizeof(buf) - 1, 0);
-    if (bytes_read < 0) return;
+    if (bytes_read < 0) {
+        return;
+    }
     buf[bytes_read] = '\0';
 
     char *p = buf;
@@ -26,6 +27,7 @@ void parse_mem(MemMon *memmon)
     skip_to_digit(&p);
     memmon->cached = str_to_uint64(&p);
 
-    if (memmon->total > 0)
+    if (memmon->total > 0) {
         memmon->used = memmon->total - memmon->available;
+    }
 }

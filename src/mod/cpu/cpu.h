@@ -5,8 +5,7 @@
 #include <stdint.h>
 #include "util/rect.h"
 
-typedef struct
-{
+typedef struct {
     uint64_t *prev_total;
     uint64_t *prev_idle;
 
@@ -50,13 +49,13 @@ typedef struct
     uint8_t main_usage[256];
 } CpuMon;
 
-void init_cpu(CpuMon *cpumon);
-void deinit_cpu(CpuMon *cpumon);
+void init_cpu(CpuMon cpumon[static 1]);
+void deinit_cpu(CpuMon cpumon[static 1]);
 
-void update_cpu_data(CpuMon *cpumon);
+void update_cpu_data(CpuMon cpumon[static 1]);
 
-void recalc_cpu(CpuMon *cpumon);
-void draw_cpu_ui(CpuMon *cpumon, char **p);
-void draw_cpu_data(CpuMon* cpumon, char **p);
+void recalc_cpu(CpuMon cpumon[static 1]);
+void draw_cpu_ui(CpuMon cpumon[static 1], char* p[static 1]);
+void draw_cpu_data(CpuMon cpumon[static 1], char* p[static 1]);
 
 #endif

@@ -23,8 +23,7 @@ typedef struct {
     const char *mem_free;
 } RawPalette;
 
-static const RawPalette DARK_PAL =
-{
+static const RawPalette DARK_PAL = {
     .bg = "233", .fg = "253", .dim = "243", .dim_dark = "237",
     .blk = "0",  .red = "1",   .grn = "2",   .ylw = "3",
     .blu = "4",  .mag = "5",   .cyn = "6",   .wht = "7",
@@ -34,8 +33,7 @@ static const RawPalette DARK_PAL =
     .cpu_bd = "65", .mem_bd = "101", .mem_free = "250"
 };
 
-static const RawPalette LIGHT_PAL =
-{
+static const RawPalette LIGHT_PAL = {
     .bg = "255", .fg = "234", .dim = "244", .dim_dark = "250",
     .blk = "252", .red = "124", .grn = "28",  .ylw = "136",
     .blu = "18",  .mag = "90",  .cyn = "24",  .wht = "232",
@@ -46,8 +44,7 @@ static const RawPalette LIGHT_PAL =
 };
 
 // --- INTERN ---
-static void set_fg(char *dest, const char *code)
-{
+static void set_fg(char *dest, const char *code) {
     char *p = dest;
     APPEND_LIT(&p, "\033[38;5;");
     append_str(&p, code);
@@ -55,8 +52,7 @@ static void set_fg(char *dest, const char *code)
     *p = '\0';
 }
 
-static void set_bg(char *dest, const char *code)
-{
+static void set_bg(char *dest, const char *code) {
     char *p = dest;
     APPEND_LIT(&p, "\033[48;5;");
     append_str(&p, code);
@@ -64,8 +60,7 @@ static void set_bg(char *dest, const char *code)
     *p = '\0';
 }
 
-static void apply_palette(const RawPalette *p)
-{
+static void apply_palette(const RawPalette p[static 1]) {
     strcpy(theme.tx_bold, "\033[1m");
     strcpy(theme.tx_nobold, "\033[22m");
 
@@ -85,10 +80,12 @@ static void apply_palette(const RawPalette *p)
     set_fg(theme.blu, p->blu); set_fg(theme.mag, p->mag);
     set_fg(theme.cyn, p->cyn); set_fg(theme.wht, p->wht);
 
-    for (int i = 0; i < 16; i++)
+    for (size_t i = 0; i < 16; i++) {
         set_fg(theme.temp[i], p->temps[i]);
-    for (int i = 0; i < 8; i++) 
+    }
+    for (size_t i = 0; i < 8; i++) {
         set_fg(theme.pct[i], p->pcts[i]);
+    }
 
     set_fg(theme.cpu_bd, p->cpu_bd);
     set_fg(theme.mem_bd, p->mem_bd);
@@ -96,21 +93,16 @@ static void apply_palette(const RawPalette *p)
 }
 
 // --- PUBLIC ---
-void theme_init()
-{
+void theme_init() {
     apply_palette(&DARK_PAL);
     current_theme_id = 0;
 }
 
-void theme_toggle()
-{
-    if (current_theme_id == 0)
-    {
+void theme_toggle() {
+    if (current_theme_id == 0) {
         apply_palette(&LIGHT_PAL);
         current_theme_id = 1;
-    }
-    else
-    {
+    } else {
         apply_palette(&DARK_PAL);
         current_theme_id = 0;
     }

@@ -21,8 +21,8 @@ typedef struct {
     uint16_t delay;
 } AppContext;
 
-void app_init(AppContext *ctx);
-void app_destroy(AppContext *ctx);
-void app_run(AppContext *ctx);
+void app_init(AppContext ctx[static 1]);
+void app_destroy(AppContext ctx[static 1]);
+void app_run(AppContext ctx[static 1]);
 
 #endif

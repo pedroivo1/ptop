@@ -40,7 +40,7 @@ typedef struct {
 
 extern Theme theme;
 
-void theme_init(void);
-void theme_toggle(void);
+void theme_init();
+void theme_toggle();
 
 #endif

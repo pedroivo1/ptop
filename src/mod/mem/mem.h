@@ -4,8 +4,7 @@
 #include <stdint.h>
 #include "util/rect.h"
 
-typedef struct
-{
+typedef struct {
     uint64_t total;
     uint64_t free;
     uint64_t available;
@@ -18,11 +17,11 @@ typedef struct
 
 } MemMon;
 
-void init_mem(MemMon *memmon);
-void deinit_mem(MemMon *memmon);
-void update_mem_data(MemMon *memmon);
+void init_mem(MemMon memmon[static 1]);
+void deinit_mem(MemMon memmon[static 1]);
+void update_mem_data(MemMon memmon[static 1]);
 
-void draw_mem_ui(MemMon *memmon, char **p);
-void draw_mem_data(MemMon *memmon, char **p);
+void draw_mem_ui(MemMon memmon[static 1], char* p[static 1]);
+void draw_mem_data(MemMon memmon[static 1], char* p[static 1]);
 
 #endif

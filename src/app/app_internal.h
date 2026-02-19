@@ -3,10 +3,10 @@
 
 #include "app/app.h"
 
-void app_update_layout(AppContext *ctx);
-void app_handle_input(AppContext *ctx, int timeout_ms);
-void app_update_state(AppContext *ctx);
+void app_update_layout(AppContext ctx[static 1]);
+void app_handle_input(AppContext ctx[static 1], int timeout_ms);
+void app_update_state(AppContext ctx[static 1]);
 
-int app_draw(AppContext *ctx, char *buffer);
+int app_draw(AppContext ctx[static 1], char buf[static 1]);
 
 #endif

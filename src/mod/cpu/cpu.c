@@ -9,8 +9,7 @@
 #include "cfg/path.h"
 #include "mod/cpu/cpu_internal.h"
 
-void init_cpu(CpuMon *cpumon)
-{
+void init_cpu(CpuMon cpumon[static 1]) {
     memset(cpumon, 0, sizeof(*cpumon));
     cpumon->graph_width = 21;
 
@@ -41,8 +40,7 @@ void init_cpu(CpuMon *cpumon)
     *p = '\0';
     cpumon->fd_temp = open(path, O_RDONLY);
 
-    for (size_t i = 0; i < cpumon->phy_count; i++)
-    {
+    for (size_t i = 0; i < cpumon->phy_count; i++) {
         p = path;
         APPEND_LIT(&p, SYS_CPU_BASE);
         append_num(&p, i);
@@ -52,14 +50,19 @@ void init_cpu(CpuMon *cpumon)
     }
 }
 
-void deinit_cpu(CpuMon *cpumon)
-{
-    if (cpumon->fd_stat > 0) close(cpumon->fd_stat);
-    if (cpumon->fd_temp > 0) close(cpumon->fd_temp);
+void deinit_cpu(CpuMon cpumon[static 1]) {
+    if (cpumon->fd_stat > 0) {
+        close(cpumon->fd_stat);
+    }
+    if (cpumon->fd_temp > 0) {
+        close(cpumon->fd_temp);
+    }
 
     if (cpumon->fd_freq) {
-        for (int i = 0; i < cpumon->phy_count; i++) {
-            if (cpumon->fd_freq[i] > 0) close(cpumon->fd_freq[i]);
+        for (size_t i = 0; i < cpumon->phy_count; i++) {
+            if (cpumon->fd_freq[i] > 0) {
+                close(cpumon->fd_freq[i]);
+            }
         }
     }
 
@@ -71,16 +74,14 @@ void deinit_cpu(CpuMon *cpumon)
     if (cpumon->graph_hist)  free(cpumon->graph_hist);
 }
 
-void update_cpu_data(CpuMon *cpumon)
-{
+void update_cpu_data(CpuMon cpumon[static 1]) {
     get_freq_mhz(cpumon);
     get_temp_c(cpumon);
     parse_stats(cpumon);
     get_load_avg(cpumon);
 }
 
-void recalc_cpu(CpuMon *cpumon)
-{
+void recalc_cpu(CpuMon cpumon[static 1]) {
     const uint16_t BORDER_PADDING = 1;
 
     const uint16_t LABEL_LEN = 4;
@@ -90,10 +91,12 @@ void recalc_cpu(CpuMon *cpumon)
 
     // --- ROWS ---
     uint16_t rows = cpumon->rect.h - (BORDER_PADDING * 4);
-    if (rows > cpumon->thread_count)
+    if (rows > cpumon->thread_count) {
         rows = cpumon->thread_count + BORDER_PADDING;
-    if (rows < 1)
+    }
+    if (rows < 1) {
         rows = 1;
+    }
 
     // --- COLUMNS ---
     uint16_t cols = (cpumon->thread_count + rows - 1) / rows;
@@ -104,7 +107,9 @@ void recalc_cpu(CpuMon *cpumon)
     uint16_t max_allowed_w = cpumon->rect.w / 2;
 
     int available_content_w = max_allowed_w - 2 - gaps;
-    if (available_content_w < 1) available_content_w = 1;
+    if (available_content_w < 1) {
+        available_content_w = 1;
+    }
 
     uint16_t candidate_col_w = available_content_w / cols;
 
@@ -115,9 +120,10 @@ void recalc_cpu(CpuMon *cpumon)
     if (candidate_col_w < 16) {
         candidate_col_w = 9;
         cpumon->is_compact = 1;
-    }
-    else
+
+    } else {
         cpumon->is_compact = 0;
+    }
 
     uint16_t table_w = (cols * candidate_col_w) + gaps + 2;
 
@@ -129,7 +135,7 @@ void recalc_cpu(CpuMon *cpumon)
     uint16_t table_y = cpumon->rect.y + (cpumon->rect.h - table_h) / 2;
 
     // --- RECT ---
-    cpumon->r_table = (Rect){
+    cpumon->r_table = (Rect) {
         .x = table_x,
         .y = table_y,
         .w = table_w,
@@ -142,16 +148,15 @@ void recalc_cpu(CpuMon *cpumon)
     cpumon->col_width = candidate_col_w;
 
     // --- MAIN GRAPH ---
-    cpumon->r_graph = (Rect){
+    cpumon->r_graph = (Rect) {
         .x = cpumon->rect.x + BORDER_PADDING * 2,
-        .y = cpumon->rect.y + BORDER_PADDING * 4,
+        .y = cpumon->rect.y + BORDER_PADDING * 2,
         .w = cpumon->rect.w - table_w - BORDER_PADDING * 4,
-        .h = cpumon->rect.h - BORDER_PADDING * 8
+        .h = cpumon->rect.h - BORDER_PADDING * 4
     };
 }
 
-void draw_cpu_ui(CpuMon *cpumon, char **p)
-{
+void draw_cpu_ui(CpuMon cpumon[static 1], char* p[static 1]) {
     Rect r = cpumon->rect;
     Rect rt = cpumon->r_table;
 
@@ -164,8 +169,7 @@ void draw_cpu_ui(CpuMon *cpumon, char **p)
     draw_freq_ui(p, rt.x + 9, rt.y);
     append_str(p, theme.fg);
 
-    for (int i = 0; i < cpumon->thread_count; i++)
-    {
+    for (size_t i = 0; i < cpumon->thread_count; i++) {
         int col = i / cpumon->table_rows;
         int row = i % cpumon->table_rows;
 
@@ -174,11 +178,11 @@ void draw_cpu_ui(CpuMon *cpumon, char **p)
 
         // --- DESENHA O SEPARADOR ---
         if (col > 0) {
-
-            if (cpumon->is_compact)
+            if (cpumon->is_compact) {
                 tui_at(p, bx - 2, by);
-            else
+            } else {
                 tui_at(p, bx - 1, by); 
+            }
             append_str(p, theme.dim);
             APPEND_LIT(p, BOX_V);
             append_str(p, theme.fg);
@@ -187,11 +191,15 @@ void draw_cpu_ui(CpuMon *cpumon, char **p)
         tui_at(p, bx, by);
         draw_label_ui(p, i);
 
-        if (cpumon->is_compact)
+        if (cpumon->is_compact) {
             tui_at(p, bx + 3, by);
-        int width = cpumon->col_width - 9;
-        if (width < 0) width = 0;
+        }
 
+
+        size_t width = 0;
+        if (cpumon->col_width > 9) {
+            width = cpumon->col_width - 9;
+        }
         draw_usage_ui(p, width);
     }
 
@@ -199,16 +207,14 @@ void draw_cpu_ui(CpuMon *cpumon, char **p)
     draw_load_avg_ui(p, r.x + 2, r.y + r.h - 2);
 }
 
-void draw_cpu_data(CpuMon* cpumon, char **p)
-{
+void draw_cpu_data(CpuMon cpumon[static 1], char* p[static 1]) {
     Rect rt = cpumon->r_table;
 
     // --- TABLE METRICS ---
     draw_temp_data(p, rt.x + 3, rt.y, cpumon->temp);
     draw_freq_data(p, rt.x + 10, rt.y, cpumon->freq);
 
-    for (int i = 0; i < cpumon->thread_count; i++)
-    {
+    for (size_t i = 0; i < cpumon->thread_count; i++) {
         int col = i / cpumon->table_rows;
         int row = i % cpumon->table_rows;
 
@@ -216,7 +222,9 @@ void draw_cpu_data(CpuMon* cpumon, char **p)
         int by = rt.y + 1 + row;
 
         int available_w = cpumon->col_width - 9;
-        if (available_w < 0) available_w = 0;
+        if (available_w < 0) {
+            available_w = 0;
+        }
 
         int draw_w = available_w;
         int padding_left = 0;

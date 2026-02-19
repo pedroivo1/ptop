@@ -36,8 +36,7 @@
 extern const char* dots_braille[8];
 extern const char* dots_braille_inv[8];
 
-static inline void tui_at(char **p, int x, int y)
-{
+static inline void tui_at(char **p, int x, int y) {
     APPEND_LIT(p, "\033[");
     append_num(p, y);
     *(*p)++ = ';';
@@ -48,11 +47,11 @@ static inline void tui_at(char **p, int x, int y)
 void tui_setup(char *bg_color, char *font_color);
 void tui_restore();
 
-void tui_draw_box(char **p, int x, int y, int w, int h, char *color);
-void tui_draw_up_space(char **p, int x, int y, int len);
-void tui_draw_bottom_space(char **p, int x, int y, int len);
-void tui_draw_graph(char **p, uint8_t *data, int len, int capacity, int head);
-void tui_draw_graph_mirrored(char **p, uint8_t *data, int capacity, int head, Rect r);
+void tui_draw_box(char **p, int x, int y, size_t w, size_t h, char *color);
+void tui_draw_up_space(char **p, int x, int y, size_t len);
+void tui_draw_bottom_space(char **p, int x, int y, size_t len);
+void tui_draw_graph(char **p, uint8_t *data, size_t len, size_t capacity, int head);
+void tui_draw_graph_mirrored(char **p, uint8_t *data, size_t capacity, int head, Rect r);
 
 extern int term_w;
 extern int term_h;

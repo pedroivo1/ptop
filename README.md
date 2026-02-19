@@ -2,9 +2,9 @@
 
 ![Platform](https://img.shields.io/badge/-Linux-black?logo=linux)
 ![License](https://img.shields.io/badge/-GPLv2-blue)
-![Status](https://img.shields.io/badge/-WIP-orange)
-![Language](https://img.shields.io/badge/-C11-blue)
+![Language](https://img.shields.io/badge/-C23-blue)
 ![Usage](https://img.shields.io/badge/Usage-System_resource_monitor-yellow)
+![Status](https://img.shields.io/badge/-WIP-orange)
 
 Personal Table of Processes (**ptop**) é um monitor de recursos de sistema focado em performance. Escrito em C, sem dependências externas além da biblioteca padrão.
 
@@ -48,16 +48,14 @@ make release
 
 ## Performance
 
-### Eficiência de CPU (Benchmark de 10s)
-
-Em um teste de 10 segundos, o **ptop** utilizou apenas **0.25% de 1 core** de CPU.
+Em um teste de 10 segundos, o **ptop** utilizou apenas **0.25% de 1 core** da CPU.
 
 | Métrica | Tempo Gasto |
 | :--- | ---: |
 | **User (Lógica)** | **0.003s** |
 | **System (Kernel)** | **0.022s** |
 | **Total Ativo** | **0.025s** |
-| **Ocioso (Idle)** | 9.975s |
+| **Ocioso (Idle)** | **9.975s** |
 
 ## License
 

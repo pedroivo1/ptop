@@ -7,24 +7,20 @@
 #include "cfg/path.h"
 #include "mod/mem/mem_internal.h"
 
-void init_mem(MemMon *memmon)
-{
+void init_mem(MemMon memmon[static 1]) {
     memset(memmon, 0, sizeof(*memmon));
     memmon->fd_mem = open(MEMINFO, O_RDONLY);
 }
 
-void deinit_mem(MemMon *memmon)
-{
+void deinit_mem(MemMon memmon[static 1]) {
     close(memmon->fd_mem);
 }
 
-void update_mem_data(MemMon *memmon)
-{
+void update_mem_data(MemMon memmon[static 1]) {
     parse_mem(memmon);
 }
 
-void draw_mem_ui(MemMon *memmon, char **p)
-{
+void draw_mem_ui(MemMon memmon[static 1], char* p[static 1]) {
     int x = memmon->rect.x;
     int y = memmon->rect.y;
     int w = memmon->rect.w;
@@ -42,8 +38,7 @@ void draw_mem_ui(MemMon *memmon, char **p)
 
 }
 
-void draw_mem_data(MemMon *memmon, char **p)
-{
+void draw_mem_data(MemMon memmon[static 1], char* p[static 1]) {
     int x = memmon->rect.x;
     int y = memmon->rect.y;
     int w = memmon->rect.w;
@@ -52,7 +47,9 @@ void draw_mem_data(MemMon *memmon, char **p)
     int current_y = y + 2;
     int inner_w = w - 4;
 
-    if (memmon->total == 0) return;
+    if (memmon->total == 0) {
+        return;
+    }
 
     int p_used   = (memmon->used   * 100) / memmon->total;
     int p_avail  = (memmon->available * 100) / memmon->total;
