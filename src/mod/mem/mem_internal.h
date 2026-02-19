@@ -5,6 +5,6 @@
 #include "mod/mem/mem.h"
 
 void parse_mem(MemMon memmon[static 1]);
-void draw_meter(char* p[static 1], int x, int y, int w, const char *label, const char *color_bar, int perc, uint64_t val_kb);
+void draw_meter(char* p[static 1], size_t x, size_t y, size_t w, const char* label, const char* color_bar, unsigned perc, uint64_t val_kb);
 
 #endif

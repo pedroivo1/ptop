@@ -6,15 +6,15 @@
 #include "util/rect.h"
 
 typedef struct {
-    uint64_t *prev_total;
-    uint64_t *prev_idle;
+    uint64_t* prev_total;
+    uint64_t* prev_idle;
 
-    int *fd_freq;
+    int* fd_freq;
 
-    uint8_t *usage;
-    uint8_t *graph_hist;
+    uint8_t* usage;
+    uint8_t* graph_hist;
 
-    char *stat_buffer;
+    char* stat_buffer;
     size_t stat_buffer_size;
 
     uint64_t main_prev_total;
@@ -43,7 +43,7 @@ typedef struct {
     uint8_t graph_head;
     uint8_t graph_width;
 
-    uint8_t is_compact;
+    bool is_compact;
 
     uint8_t main_graph_head;
     uint8_t main_usage[256];

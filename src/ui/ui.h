@@ -17,7 +17,7 @@
 #define DOTS_8   "\xE2\xA3\xBF"  // ⣿
 
 #define INV_DOTS_1   "\xE2\xA0\x89"  // ⠉
-#define INV_DOTS_2   "\xE2\xA0\x8B"  // ⠋
+#define INV_DOTS_2   "\xE2\xA0\x99"  // ⠙
 #define INV_DOTS_3   "\xE2\xA0\x9B"  // ⠛
 #define INV_DOTS_4   "\xE2\xA0\x9F"  // ⠟
 #define INV_DOTS_5   "\xE2\xA0\xBF"  // ⠿
@@ -53,10 +53,10 @@ void tui_draw_bottom_space(char **p, int x, int y, size_t len);
 void tui_draw_graph(char **p, uint8_t *data, size_t len, size_t capacity, int head);
 void tui_draw_graph_mirrored(char **p, uint8_t *data, size_t capacity, int head, Rect r);
 
-extern int term_w;
-extern int term_h;
+extern size_t term_w;
+extern size_t term_h;
 void tui_handle_winch(int sig);
-void tui_begin_frame(int *resized);
+void tui_begin_frame(bool resized[static true]);
 void tui_update_size();
 
 #endif

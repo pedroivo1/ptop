@@ -4,7 +4,7 @@ TARGET = ptop
 TEST_TARGET = run_tests
 
 # --- Flags ---
-CFLAGS = -Wall -Wextra -Isrc
+CFLAGS = -Wall -Wextra -Isrc -std=c2x -D_DEFAULT_SOURCE
 RELEASE_FLAGS = -O3 -march=native -fno-stack-protector -flto -s
 DEBUG_FLAGS = -O0 -g -fsanitize=address
 TEST_FLAGS = $(DEBUG_FLAGS) -Isrc -Itest/unity -DUNITY_OUTPUT_COLOR

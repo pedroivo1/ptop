@@ -9,30 +9,30 @@
 #include "ui/term.h"
 #include "util/rect.h"
 
-const char *dots_braille[8] = {
+char const* dots_braille[8] = {
     DOTS_1, DOTS_2, DOTS_3, DOTS_4, DOTS_5, DOTS_6, DOTS_7, DOTS_8
 };
 
-const char *dots_braille_inv[8] = {
+char const* dots_braille_inv[8] = {
     INV_DOTS_1, INV_DOTS_2, INV_DOTS_3, INV_DOTS_4,
     INV_DOTS_5, INV_DOTS_6, INV_DOTS_7, INV_DOTS_8
 };
 
-const char *gradient_temp[16] = {
+char const* gradient_temp[16] = {
     theme.temp[0], theme.temp[1], theme.temp[2], theme.temp[3],
     theme.temp[4], theme.temp[5], theme.temp[6], theme.temp[7],
     theme.temp[8], theme.temp[9], theme.temp[10], theme.temp[11],
     theme.temp[12], theme.temp[13], theme.temp[14], theme.temp[15]
 };
 
-const char *gradient_perc[8] = {
+char const* gradient_perc[8] = {
     theme.pct[0], theme.pct[1], theme.pct[2], theme.pct[3],
     theme.pct[4], theme.pct[5], theme.pct[6], theme.pct[7]
 };
 
 static struct termios original_term;
-int term_w = 0;
-int term_h = 0;
+size_t term_w = 0;
+size_t term_h = 0;
 static volatile sig_atomic_t win_resized = 1;
 
 void tui_handle_winch(int sig) {
@@ -52,13 +52,11 @@ void tui_update_size() {
     }
 }
 
-void tui_begin_frame(int *resized) {
+void tui_begin_frame(bool resized[static true]) {
     if (win_resized) {
         tui_update_size();
         win_resized = 0;
-        if (resized) {
-            *resized = 1;
-        }
+        *resized = 1;
     }
 }
 
@@ -218,7 +216,7 @@ void tui_draw_graph_mirrored(char **p, uint8_t *data, size_t capacity, int head,
         int row_end_pixel   = (dist + 1) * 8;
 
         for (size_t x = 0; x < r.w; x++) {
-            int idx = (head + capacity - r.w + x) % capacity;
+            size_t idx = (head + capacity - r.w + x) % capacity;
             uint8_t val = data[idx];
             int needed_subpixels = (val * total_subpixels) / 100;
 

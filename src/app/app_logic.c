@@ -9,9 +9,9 @@
 #include "mod/mem/mem.h"
 
 void app_update_layout(AppContext ctx[static 1]) {
-    int w = term_w;
-    int h = term_h;
-    int margin = 1;
+    size_t w = term_w;
+    size_t h = term_h;
+    size_t margin = 1;
 
     if (ctx->show_cpu && ctx->show_mem) {
         int split_h = h - 7;
@@ -27,8 +27,8 @@ void app_update_layout(AppContext ctx[static 1]) {
         recalc_cpu(&ctx->cpu);
     }
 
-    ctx->force_redraw = 1;
-    ctx->needs_resize = 0;
+    ctx->force_redraw = true;
+    ctx->needs_resize = false;
 }
 
 static void handle_mouse(AppContext ctx[static 1]) {
@@ -47,7 +47,7 @@ static void handle_mouse(AppContext ctx[static 1]) {
     if (len > 3 && seq[0] == '[' && seq[1] == '<') {
         int btn, mx, my;
         char type;
-        
+
         if (sscanf(seq + 2, "%d;%d;%d%c", &btn, &mx, &my, &type) == 4) {
             
             if (type == 'M' && btn == 0) {
@@ -63,17 +63,17 @@ static void handle_mouse(AppContext ctx[static 1]) {
                         } else {
                             ctx->delay = 100;
                         }
-                        ctx->force_redraw = 1;
+                        ctx->force_redraw = true;
                     }
-                    
-                    int num_len = (ctx->delay >= 1000) ? 4 : 3;
+
+                    int num_len = (ctx->delay >= 1'000) ? 4 : 3;
                     int plus_offset = 3 + num_len + 2 + 1;
 
                     if (mx >= base_x + plus_offset && mx <= base_x + plus_offset + 1) {
-                        if (ctx->delay < 9900) {
+                        if (ctx->delay < 9'900) {
                             ctx->delay += 100;
                         }
-                        ctx->force_redraw = 1;
+                        ctx->force_redraw = true;
                     }
                 }
             }
@@ -86,7 +86,7 @@ static void handle_keyboard(AppContext ctx[static 1], char key) {
         case 0x03: // CTRL+C
         case 'q':
         case 'Q':
-            ctx->running = 0;
+            ctx->running = false;
             break;
         case '1':
             ctx->show_cpu = !ctx->show_cpu;
@@ -99,11 +99,11 @@ static void handle_keyboard(AppContext ctx[static 1], char key) {
         case 't':
         case 'T':
             theme_toggle();
-            ctx->force_redraw = 1;
+            ctx->force_redraw = true;
             break;
         case 'r':
         case 'R':
-            ctx->force_redraw = 1;
+            ctx->force_redraw = true;
             break;
     }
 }
@@ -135,12 +135,11 @@ void app_handle_input(AppContext ctx[static 1], int timeout_ms) {
     }
 }
 
-void app_update_state(AppContext ctx[static 1])
-{
-    if (ctx->show_cpu){
+void app_update_state(AppContext ctx[static 1]) {
+    if (ctx->show_cpu) {
         update_cpu_data(&ctx->cpu);
     }
-    if (ctx->show_mem){
+    if (ctx->show_mem) {
         update_mem_data(&ctx->mem);
     }
 }

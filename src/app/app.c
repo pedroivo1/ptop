@@ -15,14 +15,14 @@
 void app_init(AppContext ctx[static 1]) {
     memset(ctx, 0, sizeof(*ctx));
 
-    ctx->delay = 200;
-    ctx->running = 1;
-    ctx->show_cpu = 1;
-    ctx->show_mem = 1;
-    ctx->needs_resize = 1;
+    ctx->delay = 300;
+    ctx->running = true;
+    ctx->show_cpu = true;
+    ctx->show_mem = false;
+    ctx->needs_resize = true;
 
     tui_setup(theme.bg, theme.fg);
-    theme_init();
+    theme_init(0);
 
     init_cpu(&ctx->cpu);
     init_mem(&ctx->mem);
@@ -44,7 +44,7 @@ void app_run(AppContext ctx[static 1]) {
     uint64_t last_update_time = 0;
     while (ctx->running) {
         if (g_signal_quit) {
-            ctx->running = 0;
+            ctx->running = false;
         }
 
         uint64_t now = current_time_ms();
@@ -57,7 +57,7 @@ void app_run(AppContext ctx[static 1]) {
         }
 
         if (is_tick || ctx->needs_resize || ctx->force_redraw) {
-            int bytes_written = app_draw(ctx, buf);
+            ptrdiff_t bytes_written = app_draw(ctx, buf);
 
             if (bytes_written > 0) {
                 if (write(STDOUT_FILENO, buf, bytes_written) == -1) {
@@ -66,7 +66,7 @@ void app_run(AppContext ctx[static 1]) {
             }
         }
 
-        int time_spent = (int)(current_time_ms() - last_update_time);
+        uint64_t time_spent = current_time_ms() - last_update_time;
         int time_to_wait = ctx->delay - time_spent;
         if (time_to_wait < 0) {
             time_to_wait = 0;

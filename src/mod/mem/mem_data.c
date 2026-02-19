@@ -11,7 +11,7 @@ void parse_mem(MemMon memmon[static 1]) {
     }
     buf[bytes_read] = '\0';
 
-    char *p = buf;
+    char* p = buf;
 
     skip_to_digit(&p);
     memmon->total = str_to_uint64(&p);
@@ -27,7 +27,7 @@ void parse_mem(MemMon memmon[static 1]) {
     skip_to_digit(&p);
     memmon->cached = str_to_uint64(&p);
 
-    if (memmon->total > 0) {
+    if (memmon->total) {
         memmon->used = memmon->total - memmon->available;
     }
 }

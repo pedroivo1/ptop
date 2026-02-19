@@ -1,16 +1,13 @@
 #ifndef THEME_H
 #define THEME_H
 
-#include <stdint.h>
-
-// Definimos o tamanho máximo para strings ANSI (escape codes)
 #define THM_STR_LEN 32
 
 typedef struct {
     // --- TEXT ATTRIBUTES ---
     char tx_bold[THM_STR_LEN];
     char tx_nobold[THM_STR_LEN];
-    char tx_reset[32];
+    char tx_reset[THM_STR_LEN];
 
     char bg[THM_STR_LEN];
     char fg[THM_STR_LEN];
@@ -40,7 +37,7 @@ typedef struct {
 
 extern Theme theme;
 
-void theme_init();
+void theme_init(int theme_idx);
 void theme_toggle();
 
 #endif

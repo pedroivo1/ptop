@@ -1,3 +1,4 @@
+#include <stddef.h>
 #include "app.h"
 #include "app_internal.h"
 #include "ui/ui.h"
@@ -28,18 +29,18 @@ void draw_delay_ctl(AppContext ctx[static 1], char* p[static 1]) {
     append_str(p, theme.fg);
 }
 
-int app_draw(AppContext ctx[static 1], char buf[static 1]) {
+ptrdiff_t app_draw(AppContext ctx[static 1], char buf[static 1]) {
     char* p = buf;
-    int physical_resize = 0;
+    bool physical_resize = false;
 
     tui_begin_frame(&physical_resize);
 
     if (physical_resize) {
-        ctx->needs_resize = 1;
+        ctx->needs_resize = true;
         app_update_layout(ctx);
     }
 
-    int draw_static = ctx->force_redraw || ctx->needs_resize;
+    bool draw_static = ctx->force_redraw || ctx->needs_resize;
 
     if (draw_static) {
         append_str(&p, theme.bg);
@@ -66,8 +67,8 @@ int app_draw(AppContext ctx[static 1], char buf[static 1]) {
         draw_delay_ctl(ctx, &p);
     }
 
-    ctx->force_redraw = 0;
-    ctx->needs_resize = 0;
+    ctx->force_redraw = false;
+    ctx->needs_resize = false;
 
-    return (int)(p - buf);
+    return p - buf;
 }

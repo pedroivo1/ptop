@@ -8,16 +8,17 @@
 #include "util/util.h"
 #include "cfg/path.h"
 
-int get_temp_id() {
+uint64_t get_temp_id() {
     DIR* dir = opendir(HWMON_DIR);
     if (!dir) {
-        return -1;
+        return UINT64_MAX;
     }
 
     struct dirent* entry;
     char path[256];
     char buf[64];
-    int found_id = -1;
+
+    uint64_t found_id = UINT64_MAX;
     char* p;
     while ((entry = readdir(dir)) != NULL) {
         if (entry->d_name[0] == '.' || strncmp(entry->d_name, HWMON, sizeof(HWMON) - 1) != 0) {
@@ -47,7 +48,7 @@ int get_temp_id() {
             if (strcmp(buf, CORETEMP) == 0) {
                 char* p_num = entry->d_name;
                 skip_to_digit(&p_num);
-                found_id = (int)str_to_uint64(&p_num);
+                found_id = str_to_uint64(&p_num);
                 break;
             }
         }
@@ -63,7 +64,7 @@ void get_topology(CpuMon cpumon[static 1]) {
         total_threads = 1;
     }
 
-    cpumon->thread_count = (uint16_t)total_threads;
+    cpumon->thread_count = (uint16_t) total_threads;
 
     cpumon->threads_per_core = 1;
     cpumon->phy_count = cpumon->thread_count;
@@ -73,7 +74,7 @@ void get_topology(CpuMon cpumon[static 1]) {
         return;
     }
 
-    char buf[2048];
+    char buf[2'048];
     ssize_t bytes_read = read(fd, buf, sizeof(buf) - 1);
     close(fd);
 
@@ -83,8 +84,8 @@ void get_topology(CpuMon cpumon[static 1]) {
 
     buf[bytes_read] = '\0';
 
-    int siblings = 0;
-    int phy_cores = 0;
+    uint64_t siblings = 0;
+    uint64_t phy_cores = 0;
     char* p = buf;
 
     while (*p) {
@@ -114,12 +115,12 @@ void get_topology(CpuMon cpumon[static 1]) {
         }
     }
 
-    cpumon->threads_per_core = (uint16_t)threads_per_core;
-    cpumon->phy_count = cpumon->thread_count / cpumon->threads_per_core;
+    cpumon->threads_per_core = (uint8_t) threads_per_core;
+    cpumon->phy_count = (uint16_t) cpumon->thread_count / cpumon->threads_per_core;
 }
 
 void get_temp_c(CpuMon cpumon[static 1]) {
-    cpumon->temp = read_sysfs_uint64(cpumon->fd_temp) / 1000;
+    cpumon->temp = read_sysfs_uint64(cpumon->fd_temp) / 1'000;
 }
 
 void get_freq_mhz(CpuMon cpumon[static 1]) {
@@ -156,7 +157,7 @@ void get_load_avg(CpuMon cpumon[static 1]) {
 static inline uint8_t calc_core_usage (
     uint64_t user, uint64_t nice, uint64_t system, uint64_t idle,
     uint64_t iowait, uint64_t irq, uint64_t softirq, uint64_t steal,
-    uint64_t *prev_total, uint64_t *prev_idle
+    uint64_t* prev_total, uint64_t* prev_idle
 )
 {
     uint64_t virt_idle = idle + iowait;
@@ -173,7 +174,7 @@ static inline uint8_t calc_core_usage (
         return 0;
     }
 
-    return (uint8_t)(((diff_total - diff_idle) * 100) / diff_total);
+    return (uint8_t) (((diff_total - diff_idle) * 100) / diff_total);
 }
 
 static inline void push_to_history(CpuMon cpumon[static 1], int cpu_id, uint8_t usage) {

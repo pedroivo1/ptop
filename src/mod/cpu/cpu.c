@@ -15,7 +15,7 @@ void init_cpu(CpuMon cpumon[static 1]) {
 
     get_topology(cpumon);
 
-    int num_lines = cpumon->thread_count + 2;
+    size_t num_lines = cpumon->thread_count + 2;
     size_t line_len = 512;
     cpumon->stat_buffer_size = num_lines * line_len;
     cpumon->stat_buffer = malloc(cpumon->stat_buffer_size);
@@ -29,9 +29,13 @@ void init_cpu(CpuMon cpumon[static 1]) {
 
     cpumon->fd_stat = open(STAT, O_RDONLY);
 
-    int hwmon_cpu_id = get_temp_id();
+    uint64_t hwmon_cpu_id;
+    do {
+        hwmon_cpu_id = get_temp_id();
+    } while (hwmon_cpu_id == UINT64_MAX);
+
     char path[128];
-    char *p = path;
+    char* p = path;
     APPEND_LIT(&p, HWMON_DIR HWMON);
     append_num(&p, hwmon_cpu_id);
     APPEND_LIT(&p, HWMON_TEMP);
@@ -106,9 +110,9 @@ void recalc_cpu(CpuMon cpumon[static 1]) {
     uint16_t gaps = (cols > 0) ? cols - 1 : 0;
     uint16_t max_allowed_w = cpumon->rect.w / 2;
 
-    int available_content_w = max_allowed_w - 2 - gaps;
-    if (available_content_w < 1) {
-        available_content_w = 1;
+    size_t available_content_w = 1;
+    if (max_allowed_w > 2 + gaps) {
+        available_content_w = max_allowed_w - 2 - gaps;
     }
 
     uint16_t candidate_col_w = available_content_w / cols;
@@ -119,10 +123,10 @@ void recalc_cpu(CpuMon cpumon[static 1]) {
 
     if (candidate_col_w < 16) {
         candidate_col_w = 9;
-        cpumon->is_compact = 1;
+        cpumon->is_compact = true;
 
     } else {
-        cpumon->is_compact = 0;
+        cpumon->is_compact = false;
     }
 
     uint16_t table_w = (cols * candidate_col_w) + gaps + 2;
@@ -170,11 +174,11 @@ void draw_cpu_ui(CpuMon cpumon[static 1], char* p[static 1]) {
     append_str(p, theme.fg);
 
     for (size_t i = 0; i < cpumon->thread_count; i++) {
-        int col = i / cpumon->table_rows;
-        int row = i % cpumon->table_rows;
+        unsigned col = i / cpumon->table_rows;
+        unsigned row = i % cpumon->table_rows;
 
-        int bx = rt.x + 1 + (col * cpumon->col_width) + col;
-        int by = rt.y + 1 + row;
+        size_t bx = rt.x + 1 + (col * cpumon->col_width) + col;
+        size_t by = rt.y + 1 + row;
 
         // --- DESENHA O SEPARADOR ---
         if (col > 0) {
@@ -195,7 +199,6 @@ void draw_cpu_ui(CpuMon cpumon[static 1], char* p[static 1]) {
             tui_at(p, bx + 3, by);
         }
 
-
         size_t width = 0;
         if (cpumon->col_width > 9) {
             width = cpumon->col_width - 9;
@@ -215,25 +218,24 @@ void draw_cpu_data(CpuMon cpumon[static 1], char* p[static 1]) {
     draw_freq_data(p, rt.x + 10, rt.y, cpumon->freq);
 
     for (size_t i = 0; i < cpumon->thread_count; i++) {
-        int col = i / cpumon->table_rows;
-        int row = i % cpumon->table_rows;
+        unsigned col = i / cpumon->table_rows;
+        unsigned row = i % cpumon->table_rows;
 
-        int bx = rt.x + 1 + (col * cpumon->col_width) + col;
-        int by = rt.y + 1 + row;
+        size_t bx = rt.x + 1 + (col * cpumon->col_width) + col;
+        size_t by = rt.y + 1 + row;
 
-        int available_w = cpumon->col_width - 9;
-        if (available_w < 0) {
-            available_w = 0;
+        size_t available_w = 0;
+        if (cpumon->col_width > 9) {
+            available_w = cpumon->col_width - 9;
         }
 
-        int draw_w = available_w;
-        int padding_left = 0;
+        size_t draw_w = available_w;
+        size_t padding_left = 0;
 
-        int label_offset = cpumon->is_compact ? 3 : 4;
+        size_t label_offset = cpumon->is_compact ? 3 : 4;
         tui_at(p, bx + label_offset + padding_left, by);
 
-        uint8_t *core_hist_ptr = &cpumon->graph_hist[i * cpumon->graph_width];
-
+        uint8_t* core_hist_ptr = &cpumon->graph_hist[i * cpumon->graph_width];
         tui_draw_graph(p, core_hist_ptr, draw_w, cpumon->graph_width, cpumon->graph_head);
 
         draw_usage_data(p, cpumon->usage[i]);

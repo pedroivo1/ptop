@@ -6,17 +6,17 @@
 #include "mod/cpu/cpu.h"
 #include "mod/mem/mem.h"
 
-extern volatile sig_atomic_t g_signal_quit;
+extern sig_atomic_t volatile g_signal_quit;
 
 typedef struct {
     CpuMon cpu;
     MemMon mem;
 
-    int running;
-    int show_cpu;
-    int show_mem;
-    int needs_resize;
-    int force_redraw;
+    bool running;
+    bool show_cpu;
+    bool show_mem;
+    bool needs_resize;
+    bool force_redraw;
 
     uint16_t delay;
 } AppContext;

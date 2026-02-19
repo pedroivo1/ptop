@@ -7,23 +7,29 @@ Theme theme;
 static int current_theme_id = 0;
 
 typedef struct {
-    const char *bg;
-    const char *fg;
-    const char *dim;
-    const char *dim_dark;
+    char const* bg;
+    char const* fg;
+    char const* dim;
+    char const* dim_dark;
 
-    const char *blk; const char *red; const char *grn; const char *ylw;
-    const char *blu; const char *mag; const char *cyn; const char *wht;
+    char const* blk;
+    char const* red;
+    char const* grn;
+    char const* ylw;
+    char const* blu;
+    char const* mag;
+    char const* cyn;
+    char const* wht;
 
-    const char *temps[16];
-    const char *pcts[8];
+    char const* temps[16];
+    char const* pcts[8];
 
-    const char *cpu_bd;
-    const char *mem_bd;
-    const char *mem_free;
+    char const* cpu_bd;
+    char const* mem_bd;
+    char const* mem_free;
 } RawPalette;
 
-static const RawPalette DARK_PAL = {
+static RawPalette const DARK_PAL = {
     .bg = "233", .fg = "253", .dim = "243", .dim_dark = "237",
     .blk = "0",  .red = "1",   .grn = "2",   .ylw = "3",
     .blu = "4",  .mag = "5",   .cyn = "6",   .wht = "7",
@@ -33,7 +39,7 @@ static const RawPalette DARK_PAL = {
     .cpu_bd = "65", .mem_bd = "101", .mem_free = "250"
 };
 
-static const RawPalette LIGHT_PAL = {
+static RawPalette const LIGHT_PAL = {
     .bg = "255", .fg = "234", .dim = "244", .dim_dark = "250",
     .blk = "252", .red = "124", .grn = "28",  .ylw = "136",
     .blu = "18",  .mag = "90",  .cyn = "24",  .wht = "232",
@@ -44,23 +50,23 @@ static const RawPalette LIGHT_PAL = {
 };
 
 // --- INTERN ---
-static void set_fg(char *dest, const char *code) {
-    char *p = dest;
+static void set_fg(char dest[static 1], char const code[static 1]) {
+    char* p = dest;
     APPEND_LIT(&p, "\033[38;5;");
     append_str(&p, code);
     APPEND_LIT(&p, "m");
     *p = '\0';
 }
 
-static void set_bg(char *dest, const char *code) {
-    char *p = dest;
+static void set_bg(char dest[static 1], char const code[static 1]) {
+    char* p = dest;
     APPEND_LIT(&p, "\033[48;5;");
     append_str(&p, code);
     APPEND_LIT(&p, "m");
     *p = '\0';
 }
 
-static void apply_palette(const RawPalette p[static 1]) {
+static void apply_palette(RawPalette const p[static 1]) {
     strcpy(theme.tx_bold, "\033[1m");
     strcpy(theme.tx_nobold, "\033[22m");
 
@@ -69,7 +75,7 @@ static void apply_palette(const RawPalette p[static 1]) {
     set_fg(theme.dim, p->dim);
     set_fg(theme.dim_dark, p->dim_dark);
 
-    char *ptr = theme.tx_reset;
+    char* ptr = theme.tx_reset;
     APPEND_LIT(&ptr, "\033[0m");
     append_str(&ptr, theme.bg);
     append_str(&ptr, theme.fg);
@@ -93,9 +99,9 @@ static void apply_palette(const RawPalette p[static 1]) {
 }
 
 // --- PUBLIC ---
-void theme_init() {
+void theme_init(int theme_idx) {
     apply_palette(&DARK_PAL);
-    current_theme_id = 0;
+    current_theme_id = theme_idx;
 }
 
 void theme_toggle() {
