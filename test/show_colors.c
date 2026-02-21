@@ -1,58 +1,70 @@
 #include <stdio.h>
-#include "src/theme/theme.h"
+#include "theme/theme.h"
 
-static const char* ctemp[16] =
-{
-    TG_TEMP_0, TG_TEMP_1, TG_TEMP_2, TG_TEMP_3, TG_TEMP_4, TG_TEMP_5, TG_TEMP_6, TG_TEMP_7,
-    TG_TEMP_8, TG_TEMP_9, TG_TEMP_10, TG_TEMP_11, TG_TEMP_12, TG_TEMP_13, TG_TEMP_14, TG_TEMP_15
-};
-
-static const char* cperc[8] =
-{
-    TG_P0, TG_P1, TG_P2, TG_P3, TG_P4, TG_P5, TG_P6, TG_P7
-};
-
-static const char* blocks[6] = {" ", ".", ".", ":", ":", ":"};
-
-void print_header(const char* title) {
-    printf(TX_RESET "\n" TX_BOLD "%s" TX_NOBOLD "\n", title);
+void print_header(char const title[static 1]) {
+    printf("%s\033[K%s%s%s\033[K\n", theme.tx_reset, theme.tx_bold, title, theme.tx_nobold);
 }
 
-int main() {
-    // --- TEMPERATURE ---
-    print_header("TEMP (Start: -128 | Step: 16)");
-    
-    printf("Fluxo: ");
-    for(int i = 0; i < 16; i++) { printf("%s███", ctemp[i]); }
-    printf(TX_RESET "\n\n");
+void show_theme(ThemeId theme_idx) {
+    set_theme(theme_idx);
 
-    printf(TX_RESET "| ID | Cor | ID Macro | INIT °C |  FINAL °C |\n");
-    printf(TX_RESET "|----|-----|----------|---------|-----------|\n");
+    // --- TEMPERATURE ---
+    print_header("TEMP");
     
-    for(int i = 0; i < 16; i++) {
-        int temp_val = -128 + (i * 16);
+    printf("%s\033[KFluxo: ", theme.tx_reset);
+    for(unsigned i = 0; i < 16; i++) { 
+        printf("%s███", theme.temp[i]); 
+    }
+    
+    printf("%s\033[K\n\033[K\n", theme.tx_reset);
+
+    printf("%s\033[K| ID | Cor | ID Macro | INIT °C |  FINAL °C |\n", theme.tx_reset);
+    printf("%s\033[K|----|-----|----------|---------|-----------|\n", theme.tx_reset);
+    
+    for(unsigned i = 0; i < 16; i++) {
+        int temp_val = -128 + ((int)i * 16);
         
-        printf(TX_RESET "|%3d | %s███" TX_RESET " | TEMP_%-2d  | " TX_BOLD " %4d   " TX_NOBOLD "|" TX_BOLD " %s%4d °C   " TX_RESET "|\n", 
-               i, ctemp[i], i, temp_val, ctemp[i], temp_val+15);
+        printf("%s\033[K|%3u | %s███%s | TEMP_%-2u  | %s %4d   %s|%s %s%4d °C   %s|\n", 
+               theme.tx_reset, 
+               i, 
+               theme.temp[i], 
+               theme.tx_reset, 
+               i, 
+               theme.tx_bold, temp_val, theme.tx_nobold,
+               theme.tx_bold, theme.temp[i], temp_val + 15, theme.tx_reset);
     }
 
     // --- PERCENTAGE ---
-    print_header("USAGE (Start: 0 | Step: 16)");
+    print_header("USAGE");
     
-    printf("Fluxo: ");
-    for(int i = 0; i < 8; i++) { printf("%s███", cperc[i]); }
-    printf(TX_RESET "\n\n");
+    printf("%s\033[KFluxo: ", theme.tx_reset);
+    for(unsigned i = 0; i < 8; i++) { 
+        printf("%s███", theme.pct[i]); 
+    }
+    
+    printf("%s\033[K\n\033[K\n", theme.tx_reset);
 
-    printf(TX_RESET "| ID | Cor | ID Macro |  INIT %%  |  FINAL %% |\n");
-    printf(TX_RESET "|----|-----|----------|----------|----------|\n");
+    printf("%s\033[K| ID | Cor | ID Macro |  INIT %%  |  FINAL %% |\n", theme.tx_reset);
+    printf("%s\033[K|----|-----|----------|----------|----------|\n", theme.tx_reset);
 
-    for(int i = 0; i < 8; i++) {
-        int perc_val = 0 + (i * 16);
+    for(unsigned i = 0; i < 8; i++) {
+        unsigned perc_val = i * 16;
         
-        printf(TX_RESET "|%3d | %s███" TX_RESET " | PERC_%-2d  | " TX_BOLD "  %3d %%  " TX_NOBOLD "|" TX_BOLD " %s %3d %%   " TX_RESET "|\n", 
-               i, cperc[i], i, perc_val, cperc[i], perc_val+15);
+        printf("%s\033[K|%3u | %s███%s | PERC_%-2u  | %s  %3u %%  %s|%s %s %3u %%   %s|\n", 
+               theme.tx_reset, 
+               i, 
+               theme.pct[i], 
+               theme.tx_reset, 
+               i, 
+               theme.tx_bold, perc_val, theme.tx_nobold,
+               theme.tx_bold, theme.pct[i], perc_val + 15, theme.tx_reset);
     }
 
     printf("\033[0m\n");
+}
+
+int main(void) {
+    show_theme(THEME_DARK);
+    show_theme(THEME_LIGHT);
     return 0;
 }

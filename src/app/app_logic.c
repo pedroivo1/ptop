@@ -5,6 +5,7 @@
 #include "app_internal.h"
 #include "ui/ui.h"
 #include "ui/term.h"
+#include "theme/theme.h"
 #include "mod/cpu/cpu.h"
 #include "mod/mem/mem.h"
 
@@ -98,7 +99,7 @@ static void handle_keyboard(AppContext ctx[static 1], char key) {
             break;
         case 't':
         case 'T':
-            theme_toggle();
+            toggle_theme();
             ctx->force_redraw = true;
             break;
         case 'r':

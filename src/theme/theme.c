@@ -1,10 +1,9 @@
 #include <string.h>
 #include "util/util.h"
 #include "theme/theme.h"
-#include "theme.h"
 
 Theme theme;
-static int current_theme_id = 0;
+static ThemeId current_theme;
 
 typedef struct {
     char const* bg;
@@ -12,14 +11,14 @@ typedef struct {
     char const* dim;
     char const* dim_dark;
 
-    char const* blk;
+    char const* black;
     char const* red;
-    char const* grn;
-    char const* ylw;
-    char const* blu;
-    char const* mag;
-    char const* cyn;
-    char const* wht;
+    char const* green;
+    char const* yellow;
+    char const* blue;
+    char const* magenta;
+    char const* cyan;
+    char const* white;
 
     char const* temps[16];
     char const* pcts[8];
@@ -29,20 +28,20 @@ typedef struct {
     char const* mem_free;
 } RawPalette;
 
-static RawPalette const DARK_PAL = {
-    .bg = "233", .fg = "253", .dim = "243", .dim_dark = "237",
-    .blk = "0",  .red = "1",   .grn = "2",   .ylw = "3",
-    .blu = "4",  .mag = "5",   .cyn = "6",   .wht = "7",
+static RawPalette const DARK = {
+    .bg = "233", .fg = "254", .dim = "243", .dim_dark = "237",
+    .black = "0",  .red = "9",   .green = "10",   .yellow = "11",
+    .blue = "12",  .magenta = "13",   .cyan = "14",   .white = "15",
     .temps = { "21", "21", "27", "27", "33", "39", "45", "51",
                "87", "49", "46", "118", "226", "202", "196", "129" },
     .pcts =  { "47", "82", "154", "190", "226", "208", "196", "129" },
     .cpu_bd = "65", .mem_bd = "101", .mem_free = "250"
 };
 
-static RawPalette const LIGHT_PAL = {
-    .bg = "255", .fg = "234", .dim = "244", .dim_dark = "250",
-    .blk = "252", .red = "124", .grn = "28",  .ylw = "136",
-    .blu = "18",  .mag = "90",  .cyn = "24",  .wht = "232",
+static RawPalette const LIGHT = {
+    .bg = "255", .fg = "232", .dim = "244", .dim_dark = "250",
+    .black = "252", .red = "160", .green = "34",  .yellow = "136",
+    .blue = "18",  .magenta = "90",  .cyan = "24",  .white = "232",
     .temps = { "18", "24", "25", "31", "30", "36", "28", "34",
                "64", "100", "136", "166", "160", "124", "88", "53" },
     .pcts =  { "28", "34", "70", "136", "166", "160", "124", "90" },
@@ -50,7 +49,7 @@ static RawPalette const LIGHT_PAL = {
 };
 
 // --- INTERN ---
-static void set_fg(char dest[static 1], char const code[static 1]) {
+static void set_fg(char dest[static THM_STR_LEN], char const code[static 1]) {
     char* p = dest;
     APPEND_LIT(&p, "\033[38;5;");
     append_str(&p, code);
@@ -58,7 +57,7 @@ static void set_fg(char dest[static 1], char const code[static 1]) {
     *p = '\0';
 }
 
-static void set_bg(char dest[static 1], char const code[static 1]) {
+static void set_bg(char dest[static THM_STR_LEN], char const code[static 1]) {
     char* p = dest;
     APPEND_LIT(&p, "\033[48;5;");
     append_str(&p, code);
@@ -81,10 +80,10 @@ static void apply_palette(RawPalette const p[static 1]) {
     append_str(&ptr, theme.fg);
     *ptr = '\0';
 
-    set_fg(theme.blk, p->blk); set_fg(theme.red, p->red);
-    set_fg(theme.grn, p->grn); set_fg(theme.ylw, p->ylw);
-    set_fg(theme.blu, p->blu); set_fg(theme.mag, p->mag);
-    set_fg(theme.cyn, p->cyn); set_fg(theme.wht, p->wht);
+    set_fg(theme.black, p->black); set_fg(theme.red, p->red);
+    set_fg(theme.green, p->green); set_fg(theme.yellow, p->yellow);
+    set_fg(theme.blue, p->blue); set_fg(theme.magenta, p->magenta);
+    set_fg(theme.cyan, p->cyan); set_fg(theme.white, p->white);
 
     for (size_t i = 0; i < 16; i++) {
         set_fg(theme.temp[i], p->temps[i]);
@@ -99,17 +98,24 @@ static void apply_palette(RawPalette const p[static 1]) {
 }
 
 // --- PUBLIC ---
-void theme_init(int theme_idx) {
-    apply_palette(&DARK_PAL);
-    current_theme_id = theme_idx;
+void set_theme(ThemeId theme_idx) {
+    current_theme = theme_idx;
+    switch (current_theme) {
+        case THEME_DARK:
+            apply_palette(&DARK);
+            break;
+        case THEME_LIGHT:
+            apply_palette(&LIGHT);
+            break;
+        default:
+            apply_palette(&DARK);
+    }
 }
 
-void theme_toggle() {
-    if (current_theme_id == 0) {
-        apply_palette(&LIGHT_PAL);
-        current_theme_id = 1;
+void toggle_theme() {
+    if (current_theme == THEME_DARK) {
+        set_theme(THEME_LIGHT);
     } else {
-        apply_palette(&DARK_PAL);
-        current_theme_id = 0;
+        set_theme(THEME_DARK);
     }
 }

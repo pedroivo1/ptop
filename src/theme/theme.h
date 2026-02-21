@@ -15,14 +15,14 @@ typedef struct {
     char dim_dark[THM_STR_LEN];
 
     // --- BASIC COLORS ---
-    char blk[THM_STR_LEN];
+    char black[THM_STR_LEN];
     char red[THM_STR_LEN];
-    char grn[THM_STR_LEN];
-    char ylw[THM_STR_LEN];
-    char blu[THM_STR_LEN];
-    char mag[THM_STR_LEN];
-    char cyn[THM_STR_LEN];
-    char wht[THM_STR_LEN];
+    char green[THM_STR_LEN];
+    char yellow[THM_STR_LEN];
+    char blue[THM_STR_LEN];
+    char magenta[THM_STR_LEN];
+    char cyan[THM_STR_LEN];
+    char white[THM_STR_LEN];
 
     // --- GRADIENTS ---
     char temp[16][THM_STR_LEN];
@@ -35,9 +35,14 @@ typedef struct {
 
 } Theme;
 
+typedef enum {
+    THEME_DARK,   // Vale 0
+    THEME_LIGHT,  // Vale 1
+} ThemeId;
+
 extern Theme theme;
 
-void theme_init(int theme_idx);
-void theme_toggle();
+void set_theme(ThemeId theme_idx);
+void toggle_theme();
 
 #endif

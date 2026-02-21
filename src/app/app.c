@@ -9,6 +9,7 @@
 #include "ui/term.h"
 #include "util/util.h"
 #include "cfg/buf.h"
+#include "theme/theme.h"
 #include "mod/cpu/cpu.h"
 #include "mod/mem/mem.h"
 
@@ -22,7 +23,7 @@ void app_init(AppContext ctx[static 1]) {
     ctx->needs_resize = true;
 
     tui_setup(theme.bg, theme.fg);
-    theme_init(0);
+    set_theme(THEME_DARK);
 
     init_cpu(&ctx->cpu);
     init_mem(&ctx->mem);
