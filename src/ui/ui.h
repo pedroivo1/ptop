@@ -1,11 +1,12 @@
 #ifndef TUI_H
 #define TUI_H
 
-#include <stdint.h>
-#include "util/util.h"
-#include "util/rect.h"
 #include "theme/theme.h"
+#include "util/rect.h"
+#include "util/util.h"
+#include <stdint.h>
 
+// clang-format off
 // --- BRAILE DOTS ---
 #define DOTS_1   "\xE2\xA3\x80"  // ⣀
 #define DOTS_2   "\xE2\xA3\xA0"  // ⣠
@@ -32,26 +33,36 @@
 #define BOX_BR "┘"
 #define BOX_H  "─"
 #define BOX_V  "│"
+// clang-format on
 
 extern const char* dots_braille[8];
 extern const char* dots_braille_inv[8];
 
-static inline void tui_at(char **p, int x, int y) {
-    APPEND_LIT(p, "\033[");
-    append_num(p, y);
-    *(*p)++ = ';';
-    append_num(p, x);
-    *(*p)++ = 'H';
+static inline void tui_at(char** p, int x, int y)
+{
+   APPEND_LIT(p, "\033[");
+   append_num(p, y);
+   *(*p)++ = ';';
+   append_num(p, x);
+   *(*p)++ = 'H';
 }
 
-void tui_setup(char *bg_color, char *font_color);
+void tui_setup(char* bg_color, char* font_color);
 void tui_restore();
 
-void tui_draw_box(char **p, int x, int y, size_t w, size_t h, char *color);
-void tui_draw_up_space(char **p, int x, int y, size_t len);
-void tui_draw_bottom_space(char **p, int x, int y, size_t len);
-void tui_draw_graph(char **p, uint8_t *data, size_t len, size_t capacity, int head);
-void tui_draw_graph_mirrored(char **p, uint8_t *data, size_t capacity, int head, Rect r);
+void tui_draw_box(char** p, int x, int y, size_t w, size_t h, char* color);
+void tui_draw_up_space(char** p, int x, int y, size_t len);
+void tui_draw_bottom_space(char** p, int x, int y, size_t len);
+void tui_draw_graph(char** p,
+                    uint8_t* data,
+                    size_t len,
+                    size_t capacity,
+                    int head);
+void tui_draw_graph_mirrored(char** p,
+                             uint8_t* data,
+                             size_t capacity,
+                             int head,
+                             Rect r);
 
 extern size_t term_w;
 extern size_t term_h;

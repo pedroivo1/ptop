@@ -1,3 +1,4 @@
+// clang-format off
 #ifndef TERM_H
 #define TERM_H
 
@@ -39,3 +40,4 @@
     TUI_SGR_MOUSE_OFF
 
 #endif
+// clang-format on

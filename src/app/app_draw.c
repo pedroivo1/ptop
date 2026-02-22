@@ -1,74 +1,87 @@
-#include <stddef.h>
 #include "app.h"
 #include "app_internal.h"
-#include "ui/ui.h"
-#include "ui/term.h"
-#include "util/util.h"
-#include "theme/theme.h"
 #include "mod/cpu/cpu.h"
 #include "mod/mem/mem.h"
+#include "theme/theme.h"
+#include "ui/term.h"
+#include "ui/ui.h"
+#include "util/util.h"
+#include <stddef.h>
 
-void draw_delay_ctl(AppContext ctx[static 1], char* p[static 1]) {
+void draw_delay_ctl(unsigned delay, char* buf_ptr[static 1])
+{
 
-    int x = term_w - 12; 
-    int y = 1;
+   size_t x = 0;
+   if (term_w > 12)
+      x = term_w - 12;
+   size_t y = 1;
 
-    tui_at(p, x, y);
+   tui_at(buf_ptr, x, y);
 
-    append_str(p, theme.cpu_bd);
-    APPEND_LIT(p, BOX_TR);
-    append_str(p, theme.fg);
-    APPEND_LIT(p, "- ");
+   append_str(buf_ptr, theme.cpu_bd);
+   APPEND_LIT(buf_ptr, BOX_TR);
+   append_str(buf_ptr, theme.fg);
+   APPEND_LIT(buf_ptr, "- ");
 
-    append_num(p, ctx->delay);
-    APPEND_LIT(p, "ms");
+   append_num(buf_ptr, delay);
+   APPEND_LIT(buf_ptr, "ms");
 
-    APPEND_LIT(p, " +");
-    append_str(p, theme.cpu_bd);
-    APPEND_LIT(p, BOX_TL);
-    append_str(p, theme.fg);
+   APPEND_LIT(buf_ptr, " +");
+   append_str(buf_ptr, theme.cpu_bd);
+   APPEND_LIT(buf_ptr, BOX_TL);
+   append_str(buf_ptr, theme.fg);
 }
 
-ptrdiff_t app_draw(AppContext ctx[static 1], char buf[static 1]) {
-    char* p = buf;
-    bool physical_resize = false;
+ptrdiff_t app_draw(CpuMon cpu_ptr[static 1],
+                   MemMon mem_ptr[static 1],
+                   bool cpu_on_ptr[static 1],
+                   bool mem_on_ptr[static 1],
+                   bool resize_ptr[static 1],
+                   bool redraw_ptr[static 1],
+                   unsigned delay,
+                   char buf[static 1])
+{
+   char* char_ptr = buf;
+   bool physical_resize = false;
 
-    tui_begin_frame(&physical_resize);
+   tui_begin_frame(&physical_resize);
 
-    if (physical_resize) {
-        ctx->needs_resize = true;
-        app_update_layout(ctx);
-    }
+   if (physical_resize)
+   {
+      *resize_ptr = true;
+      app_update_layout(
+         cpu_ptr, mem_ptr, cpu_on_ptr, mem_on_ptr, resize_ptr, redraw_ptr);
+   }
 
-    bool draw_static = ctx->force_redraw || ctx->needs_resize;
+   bool draw_static = *redraw_ptr || *resize_ptr;
 
-    if (draw_static) {
-        append_str(&p, theme.bg);
-        APPEND_LIT(&p, "\033[2J");
-    }
+   if (draw_static)
+   {
+      append_str(&char_ptr, theme.bg);
+      APPEND_LIT(&char_ptr, "\033[2J");
+   }
 
-    if (ctx->show_cpu) {
-        if (draw_static) {
-            draw_cpu_ui(&ctx->cpu, &p);
-        }
+   if (*cpu_on_ptr)
+   {
+      if (draw_static)
+         draw_cpu_ui(cpu_ptr, &char_ptr);
 
-        draw_cpu_data(&ctx->cpu, &p);
-    }
+      draw_cpu_data(cpu_ptr, &char_ptr);
+   }
 
-    if (ctx->show_mem) {
-        if (draw_static) {
-            draw_mem_ui(&ctx->mem, &p);
-        }
+   if (*mem_on_ptr)
+   {
+      if (draw_static)
+         draw_mem_ui(mem_ptr, &char_ptr);
 
-        draw_mem_data(&ctx->mem, &p);
-    }
+      draw_mem_data(mem_ptr, &char_ptr);
+   }
 
-    if (draw_static) {
-        draw_delay_ctl(ctx, &p);
-    }
+   if (draw_static)
+      draw_delay_ctl(delay, &char_ptr);
 
-    ctx->force_redraw = false;
-    ctx->needs_resize = false;
+   *redraw_ptr = false;
+   *resize_ptr = false;
 
-    return p - buf;
+   return char_ptr - buf;
 }

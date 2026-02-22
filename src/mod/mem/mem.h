@@ -1,19 +1,20 @@
 #ifndef MEM_H
 #define MEM_H
 
-#include <stdint.h>
 #include "util/rect.h"
+#include <stdint.h>
 
-typedef struct {
-    uint64_t total;
-    uint64_t free;
-    uint64_t available;
-    uint64_t cached;
-    uint64_t used;
+typedef struct
+{
+   uint64_t total;
+   uint64_t free;
+   uint64_t available;
+   uint64_t cached;
+   uint64_t used;
 
-    int fd_mem;
+   int fd_mem;
 
-    Rect rect;
+   Rect rect;
 
 } MemMon;
 

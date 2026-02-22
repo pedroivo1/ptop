@@ -1,8 +1,8 @@
 #ifndef CPU_INTERNAL_H
 #define CPU_INTERNAL_H
 
-#include <stdint.h>
 #include "mod/cpu/cpu.h"
+#include <stdint.h>
 
 // --- BACKEND ---
 void get_topology(CpuMon cpumon[static 1]);
