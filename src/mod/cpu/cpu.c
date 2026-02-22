@@ -1,3 +1,4 @@
+#include "mod/cpu/cpu.h"
 #include "cfg/path.h"
 #include "mod/cpu/cpu_internal.h"
 #include "ui/term.h"
@@ -8,16 +9,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-
-void init_cpu(CpuMon cpumon[static 1])
-{
-   memset(cpumon, 0, sizeof(*cpumon));
-   cpumon->graph_width = 21;
-
-   get_topology(cpumon);
-   malloc_cpu(cpumon);
-   open_cpu_fds(cpumon);
-}
 
 void deinit_cpu(CpuMon cpumon[static 1])
 {
