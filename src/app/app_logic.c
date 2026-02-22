@@ -36,7 +36,7 @@ void app_update_layout(CpuMon cpu_ptr[static 1],
    }
 
    if (*cpu_on_ptr)
-      recalc_cpu(cpu_ptr);
+      calc_cpu_layout(cpu_ptr);
 
    *resize_ptr = false;
    *redraw_ptr = true;
@@ -187,7 +187,7 @@ void app_update_state(CpuMon cpu_ptr[static 1],
                       bool mem_on)
 {
    if (cpu_on)
-      update_cpu_data(cpu_ptr);
+      update_cpu(cpu_ptr);
    if (mem_on)
       update_mem_data(mem_ptr);
 }

@@ -53,9 +53,9 @@ typedef struct
 void init_cpu(CpuMon cpumon[static 1]);
 void deinit_cpu(CpuMon cpumon[static 1]);
 
-void update_cpu_data(CpuMon cpumon[static 1]);
+void update_cpu(CpuMon cpumon[static 1]);
 
-void recalc_cpu(CpuMon cpumon[static 1]);
+void calc_cpu_layout(CpuMon cpumon[static 1]);
 void draw_cpu_ui(CpuMon cpumon[static 1], char* p[static 1]);
 void draw_cpu_data(CpuMon cpumon[static 1], char* p[static 1]);
 

@@ -35,8 +35,10 @@
 #define BOX_V  "│"
 // clang-format on
 
-extern const char* dots_braille[8];
-extern const char* dots_braille_inv[8];
+extern char const* dots_braille[8];
+extern char const* dots_braille_inv[8];
+extern char const* gradient_temp[16];
+extern char const* gradient_perc[8];
 
 static inline void tui_at(char** p, int x, int y)
 {

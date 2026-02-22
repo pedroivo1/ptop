@@ -4,7 +4,7 @@
 #include "ui/ui.h"
 #include "util/util.h"
 #include <fcntl.h>
-#include <stdint.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
@@ -15,77 +15,31 @@ void init_cpu(CpuMon cpumon[static 1])
    cpumon->graph_width = 21;
 
    get_topology(cpumon);
-
-   size_t num_lines = cpumon->thread_count + 2;
-   size_t line_len = 512;
-   cpumon->stat_buffer_size = num_lines * line_len;
-   cpumon->stat_buffer = malloc(cpumon->stat_buffer_size);
-
-   cpumon->prev_total = calloc(cpumon->thread_count, sizeof(*cpumon->prev_total));
-   cpumon->prev_idle = calloc(cpumon->thread_count, sizeof(*cpumon->prev_idle));
-   cpumon->usage = calloc(cpumon->thread_count, sizeof(*cpumon->usage));
-   cpumon->fd_freq = calloc(cpumon->phy_count, sizeof(*cpumon->fd_freq));
-
-   cpumon->graph_hist = calloc(cpumon->thread_count * cpumon->graph_width, sizeof(uint8_t));
-
-   cpumon->fd_stat = open(STAT, O_RDONLY);
-
-   uint64_t hwmon_cpu_id;
-   do
-   {
-      hwmon_cpu_id = get_temp_id();
-   } while (hwmon_cpu_id == UINT64_MAX);
-
-   char path[128];
-   char* p = path;
-   APPEND_LIT(&p, HWMON_DIR HWMON);
-   append_num(&p, hwmon_cpu_id);
-   APPEND_LIT(&p, HWMON_TEMP);
-   append_num(&p, 1);
-   APPEND_LIT(&p, HWMON_INPUT);
-   *p = '\0';
-   cpumon->fd_temp = open(path, O_RDONLY);
-
-   for (size_t i = 0; i < cpumon->phy_count; i++)
-   {
-      p = path;
-      APPEND_LIT(&p, SYS_CPU_BASE);
-      append_num(&p, i);
-      APPEND_LIT(&p, CPU_FREQ_FILE);
-      *p = '\0';
-      cpumon->fd_freq[i] = open(path, O_RDONLY);
-   }
+   malloc_cpu(cpumon);
+   open_cpu_fds(cpumon);
 }
 
 void deinit_cpu(CpuMon cpumon[static 1])
 {
-   if (cpumon->fd_stat > 0)
+   if (cpumon->fd_stat >= 0)
       close(cpumon->fd_stat);
-   if (cpumon->fd_temp > 0)
+   if (cpumon->fd_temp >= 0)
       close(cpumon->fd_temp);
 
    if (cpumon->fd_freq)
-   {
       for (size_t i = 0; i < cpumon->phy_count; i++)
-         if (cpumon->fd_freq[i] > 0)
+         if (cpumon->fd_freq[i] >= 0)
             close(cpumon->fd_freq[i]);
-   }
 
-   if (cpumon->stat_buffer)
-      free(cpumon->stat_buffer);
-   if (cpumon->fd_freq)
-      free(cpumon->fd_freq);
-   if (cpumon->prev_total)
-      free(cpumon->prev_total);
-   if (cpumon->prev_idle)
-      free(cpumon->prev_idle);
-   if (cpumon->usage)
-      free(cpumon->usage);
-   if (cpumon->graph_hist)
-      free(cpumon->graph_hist);
+   free(cpumon->stat_buffer);
+   free(cpumon->fd_freq);
+   free(cpumon->prev_total);
+   free(cpumon->prev_idle);
+   free(cpumon->usage);
+   free(cpumon->graph_hist);
 }
 
-void update_cpu_data(CpuMon cpumon[static 1])
+void update_cpu(CpuMon cpumon[static 1])
 {
    get_freq_mhz(cpumon);
    get_temp_c(cpumon);
@@ -93,7 +47,7 @@ void update_cpu_data(CpuMon cpumon[static 1])
    get_load_avg(cpumon);
 }
 
-void recalc_cpu(CpuMon cpumon[static 1])
+void calc_cpu_layout(CpuMon cpumon[static 1])
 {
    const uint16_t BORDER_PADDING = 1;
 
@@ -146,7 +100,8 @@ void recalc_cpu(CpuMon cpumon[static 1])
    uint16_t table_y = cpumon->rect.y + (cpumon->rect.h - table_h) / 2;
 
    // --- RECT ---
-   cpumon->r_table = (Rect){.x = table_x, .y = table_y, .w = table_w, .h = table_h};
+   cpumon->r_table =
+      (Rect){.x = table_x, .y = table_y, .w = table_w, .h = table_h};
 
    // --- GRID ---
    cpumon->table_cols = cols;
@@ -237,15 +192,20 @@ void draw_cpu_data(CpuMon cpumon[static 1], char* p[static 1])
       tui_at(p, bx + label_offset + padding_left, by);
 
       uint8_t* core_hist_ptr = &cpumon->graph_hist[i * cpumon->graph_width];
-      tui_draw_graph(p, core_hist_ptr, draw_w, cpumon->graph_width, cpumon->graph_head);
+      tui_draw_graph(
+         p, core_hist_ptr, draw_w, cpumon->graph_width, cpumon->graph_head);
 
       draw_usage_data(p, cpumon->usage[i]);
    }
 
    append_str(p, theme.fg);
    draw_uptime_data(p, cpumon->rect.x + 5, cpumon->rect.y + 1, cpumon->uptime);
-   draw_load_avg_data(p, cpumon->rect.x + 6, cpumon->rect.y + cpumon->rect.h - 2, cpumon->load_avg);
+   draw_load_avg_data(p,
+                      cpumon->rect.x + 6,
+                      cpumon->rect.y + cpumon->rect.h - 2,
+                      cpumon->load_avg);
 
    tui_at(p, cpumon->r_graph.x, cpumon->r_graph.y + cpumon->r_graph.h / 2);
-   tui_draw_graph_mirrored(p, cpumon->main_usage, 256, cpumon->main_graph_head, cpumon->r_graph);
+   tui_draw_graph_mirrored(
+      p, cpumon->main_usage, 256, cpumon->main_graph_head, cpumon->r_graph);
 }
